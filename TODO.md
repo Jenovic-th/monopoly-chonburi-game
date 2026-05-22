@@ -19,23 +19,30 @@
 - [x] Run build verification.
 - [x] Run lint verification.
 - [x] Push initial project to GitHub.
+- [x] Define tile data structure in `src/boardData.ts`.
+- [x] Decide the final 4 Chonburi board zones.
+- [x] Draft all 40 tile names.
+- [x] Mark special tiles:
+  - `00` Investment Bank
+  - `05` Political Event
+  - `10` Burapha University
+  - `20` Chonburi Prison
+  - `30` Local Power Broker
+- [x] Add tile categories.
+- [x] Add tile display names to the board UI.
+- [x] Add current tile detail panel.
+- [x] Add first-pass action card choice UI.
+- [x] Add `ไม่เล่นการ์ด` skip option.
+- [x] Make AI skip action-card UI for now.
+- [x] Fix card display detection after movement.
+- [x] Improve player token visibility and grouping.
 
 ## Next
 
-- [ ] Define tile data structure.
-- [ ] Decide the final 4 Chonburi board zones.
-- [ ] Draft 40 tile names.
-- [ ] Mark which tiles are normal properties and which are special tiles.
-- [ ] Decide tile categories, such as:
-  - market,
-  - beach,
-  - city,
-  - industrial,
-  - tourism,
-  - port,
-  - special.
-- [ ] Add tile display names to the UI.
-- [ ] Add basic tile detail panel when a player lands on a tile.
+- [ ] Decide what the 3 action cards should actually do.
+- [ ] Decide whether card choices should depend on tile category.
+- [ ] Decide whether AI should choose cards automatically.
+- [ ] Add real card result display after selecting a card.
 - [ ] Add player money system.
 - [ ] Decide starting money amount.
 - [ ] Add tile value and purchase price.
@@ -44,7 +51,14 @@
 - [ ] Add ownership system for land.
 - [ ] Add rent system.
 - [ ] Decide how land owners interact with small businesses on their land.
+- [ ] Add behavior for special tiles:
+  - Investment Bank
+  - Political Event
+  - Burapha University
+  - Chonburi Prison
+  - Local Power Broker
 - [ ] Add simple AI economic decisions.
+- [ ] Update README with setup, dev, and project overview.
 
 ## Design Questions
 
@@ -52,5 +66,22 @@
 - [ ] Should income from small businesses be paid at the start of each player's turn?
 - [ ] Should players be allowed to invest on unowned land only, or also on owned land with a fee?
 - [ ] If a player buys land that already has another player's business, can the owner remove it, tax it, or buy it out?
-- [ ] Which Chonburi locations should be included in the first 40-tile draft?
+- [ ] Should each normal tile always offer the same 3 cards, or should the cards vary by zone/category?
+- [ ] Should special tiles use cards too, or have their own dedicated UI?
+- [ ] What should happen when a player lands on Political Event?
+- [ ] What should happen when a player lands on Chonburi Prison?
+- [ ] What should happen when a player lands on Local Power Broker?
 
+## Handoff Notes
+
+- Current active branch: `main`.
+- Latest pushed commit at the time of this note:
+  - `f06c2e5 Add Chonburi board tiles and card choice UI`
+- If continuing on another computer:
+  - `git pull origin main`
+  - `npm.cmd install`
+  - `npm.cmd run dev`
+- Start by reading:
+  - `DEVLOG.md`
+  - `TODO.md`
+  - `src/boardData.ts`

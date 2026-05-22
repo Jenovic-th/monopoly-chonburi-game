@@ -1,5 +1,132 @@
 # DEVLOG
 
+## 2026-05-22
+
+### Current project status
+
+- Demo 0.2 is now focused on Chonburi board data and first-pass card choice UI.
+- Repository:
+  - https://github.com/Jenovic-th/monopoly-chonburi-game
+- Latest pushed commit:
+  - `f06c2e5 Add Chonburi board tiles and card choice UI`
+
+### Important workflow note for continuing on another computer
+
+- Before continuing work on another machine, run:
+  - `git pull origin main`
+  - `npm.cmd install`
+  - `npm.cmd run dev`
+- Main files to read first:
+  - `DEVLOG.md`
+  - `TODO.md`
+  - `src/boardData.ts`
+  - `src/App.tsx`
+  - `src/App.css`
+- Do not edit generated folders:
+  - `node_modules`
+  - `dist`
+
+### Completed today
+
+- Added all 40 Chonburi board tiles in `src/boardData.ts`.
+- Added tile names and tile categories to the board UI.
+- Added a current-tile detail panel in the center control area.
+- Added first-pass action card UI:
+  - shows 3 card choices when the human player lands on a normal tile,
+  - includes a `ไม่เล่นการ์ด` skip button,
+  - AI players skip card choice for now.
+- Card choices are placeholder-only for now:
+  - `Street Trade`
+  - `Local Deal`
+  - `Area Scout`
+- Card UI does not appear on special tiles:
+  - `00` Investment Bank
+  - `05` Political Event
+  - `10` Burapha University
+  - `20` Chonburi Prison
+  - `30` Local Power Broker
+- Fixed card-choice detection so it uses a reliable position ref instead of async React state.
+- Improved player tokens:
+  - tokens stay visible inside tiles,
+  - tokens have a light capsule background,
+  - multiple tokens on the same tile are grouped and do not overlap.
+
+### Final 40-tile board
+
+#### Bottom side: Bangsaen + Nong Mon
+
+- `00` Investment Bank
+- `01` Bangsaen Fish Market
+- `02` Khao Sam Muk Viewpoint
+- `03` Wonnapha Beach
+- `04` Chonlamakwithi Bridge
+- `05` Political Event
+- `06` Nong Mon Market 1
+- `07` Nong Mon Market 2
+- `08` Bangsaen Beach 1
+- `09` Bangsaen Beach 2
+- `10` Burapha University
+
+#### Left side: Sriracha + Laem Chabang
+
+- `11` Bang Phra Reservoir
+- `12` Sriracha Tiger Zoo
+- `13` Koh Loi Health Park
+- `14` J-Park Nihon Mura
+- `15` Central Sriracha
+- `16` Koh Sichang
+- `17` Khao Kheow Open Zoo
+- `18` Laem Chabang Industrial Estate 1
+- `19` Laem Chabang Industrial Estate 2
+- `20` Chonburi Prison
+
+#### Top side: Amata City + Phan Thong
+
+- `21` Amata Castle
+- `22` Ninja Amata Market
+- `23` Pinthong Industrial Area 1
+- `24` Pinthong Industrial Area 2
+- `25` Global Tech Factory Zone 1
+- `26` Global Tech Factory Zone 2
+- `27` Amata City Chonburi 1
+- `28` Amata City Chonburi 2
+- `29` Amata City Chonburi 3
+- `30` Local Power Broker
+
+#### Right side: Pattaya
+
+- `31` Lan Pho Naklua Market
+- `32` Pattaya Floating Market
+- `33` Tiffany Show
+- `34` Jomtien Beach
+- `35` Sanctuary of Truth
+- `36` Nong Nooch Garden
+- `37` Columbia Pictures Aquaverse
+- `38` Koh Larn
+- `39` Walking Street Pattaya
+
+### Current behavior
+
+- Human player presses `Roll Dice`.
+- Human player moves quickly based on two random dice.
+- If the human lands on a normal tile, 3 action cards appear.
+- The player must select a card or press `ไม่เล่นการ์ด`.
+- After the card choice is resolved, AI 1 and AI 2 take their turns automatically.
+- AI movement does not show card choices yet.
+- Special tiles are placeholders only; their special effects are not implemented yet.
+
+### Verified today
+
+- `npm.cmd run build` passed.
+- `npm.cmd run lint` passed.
+- Latest changes were pushed to GitHub.
+
+### Known notes
+
+- Browser screenshot automation may still fail in this environment, but the in-app browser can open the local Vite app.
+- Some Git commands may print `error: daemon terminated`; this has not blocked commits or pushes so far.
+- `.git/config` may show permission warnings in this environment, so commits use temporary `-c user.name` / `-c user.email` when needed.
+
 ## 2026-05-21
 
 ### Project status
@@ -67,4 +194,3 @@
   - Sriracha / Koh Loi / Laem Chabang / Koh Sichang,
   - Pattaya / Bang Lamung,
   - Sattahip / Na Jomtien / Khao Chi Chan / Samae San.
-
