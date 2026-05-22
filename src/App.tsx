@@ -1,4 +1,5 @@
 import { useMemo, useRef, useState } from 'react'
+import { boardTiles } from './boardData'
 import './App.css'
 
 type Player = {
@@ -15,7 +16,13 @@ type DiceRoll = {
   total: number
 }
 
-type Phase = 'ready' | 'ai-delay' | 'moving'
+type Phase = 'ready' | 'ai-delay' | 'moving' | 'card-choice'
+
+type ActionCard = {
+  id: string
+  title: string
+  description: string
+}
 
 const players: Player[] = [
   {
@@ -44,6 +51,24 @@ const players: Player[] = [
 const tileCount = 40
 const walkDelayMs = 55
 const aiDelayMs = 140
+const noCardTiles = new Set([0, 5, 10, 20, 30])
+const actionCards: ActionCard[] = [
+  {
+    id: 'street-trade',
+    title: 'Street Trade',
+    description: 'Prepare a small local business option for this tile.',
+  },
+  {
+    id: 'local-deal',
+    title: 'Local Deal',
+    description: 'Reserve this choice for future buying or negotiation systems.',
+  },
+  {
+    id: 'area-scout',
+    title: 'Area Scout',
+    description: 'Review this location before future investment decisions.',
+  },
+]
 
 function rollDice(): DiceRoll {
   const die1 = Math.floor(Math.random() * 6) + 1
@@ -79,7 +104,7 @@ function getTileGridPosition(tile: number) {
 }
 
 function App() {
-  const [positions, setPositions] = useState<number[]>(players.map(() => 0))
+  const [positions, setPositions] = useState<number[]>(() => players.map(() => 0))
   const [currentPlayerIndex, setCurrentPlayerIndex] = useState(0)
   const [phase, setPhase] = useState<Phase>('ready')
   const [latestRoll, setLatestRoll] = useState<DiceRoll | null>(null)
@@ -89,7 +114,9 @@ function App() {
   const skipRequestedRef = useRef(false)
   const activeRunRef = useRef(false)
   const runIdRef = useRef(0)
+  const positionsRef = useRef<number[]>(players.map(() => 0))
   const aiDelayResolverRef = useRef<(() => void) | null>(null)
+  const cardChoiceResolverRef = useRef<(() => void) | null>(null)
 
   const tileOccupants = useMemo(() => {
     return positions.reduce<Record<number, number[]>>((occupants, position, index) => {
@@ -98,16 +125,15 @@ function App() {
     }, {})
   }, [positions])
 
+  function updatePositions(nextPositions: number[]) {
+    positionsRef.current = nextPositions
+    setPositions(nextPositions)
+  }
+
   async function movePlayer(playerIndex: number, steps: number, runId: number) {
     skipRequestedRef.current = false
     setPhase('moving')
-
-    let finalPosition = 0
-
-    setPositions((currentPositions) => {
-      finalPosition = currentPositions[playerIndex]
-      return currentPositions
-    })
+    let finalPosition = positionsRef.current[playerIndex]
 
     for (let step = 0; step < steps; step += 1) {
       if (runId !== runIdRef.current) {
@@ -115,12 +141,10 @@ function App() {
       }
 
       if (skipRequestedRef.current) {
-        setPositions((currentPositions) => {
-          const nextPositions = [...currentPositions]
-          nextPositions[playerIndex] = (nextPositions[playerIndex] + (steps - step)) % tileCount
-          finalPosition = nextPositions[playerIndex]
-          return nextPositions
-        })
+        finalPosition = (finalPosition + (steps - step)) % tileCount
+        const nextPositions = [...positionsRef.current]
+        nextPositions[playerIndex] = finalPosition
+        updatePositions(nextPositions)
         break
       }
 
@@ -130,16 +154,15 @@ function App() {
         return
       }
 
-      setPositions((currentPositions) => {
-        const nextPositions = [...currentPositions]
-        nextPositions[playerIndex] = (nextPositions[playerIndex] + 1) % tileCount
-        finalPosition = nextPositions[playerIndex]
-        return nextPositions
-      })
+      finalPosition = (finalPosition + 1) % tileCount
+      const nextPositions = [...positionsRef.current]
+      nextPositions[playerIndex] = finalPosition
+      updatePositions(nextPositions)
     }
 
     skipRequestedRef.current = false
-    setStatus(`${players[playerIndex].name} stopped at tile ${finalPosition}.`)
+    setStatus(`${players[playerIndex].name} stopped at ${boardTiles[finalPosition].name}.`)
+    return finalPosition
   }
 
   async function playTurn(playerIndex: number, runId: number) {
@@ -168,7 +191,21 @@ function App() {
       ...history,
     ].slice(0, 5))
 
-    await movePlayer(playerIndex, roll.total, runId)
+    const finalPosition = await movePlayer(playerIndex, roll.total, runId)
+
+    if (
+      runId === runIdRef.current &&
+      player.role === 'Human' &&
+      typeof finalPosition === 'number' &&
+      !noCardTiles.has(finalPosition)
+    ) {
+      setPhase('card-choice')
+      setStatus(`Choose a card for ${boardTiles[finalPosition].name}, or skip.`)
+      await new Promise<void>((resolve) => {
+        cardChoiceResolverRef.current = resolve
+      })
+      cardChoiceResolverRef.current = null
+    }
   }
 
   async function playRound() {
@@ -209,16 +246,26 @@ function App() {
       return
     }
 
+    if (phase === 'card-choice') {
+      return
+    }
+
     skipRequestedRef.current = true
     setStatus('Skipping movement.')
+  }
+
+  function resolveCardChoice(message: string) {
+    setStatus(message)
+    cardChoiceResolverRef.current?.()
   }
 
   function resetGame() {
     runIdRef.current += 1
     skipRequestedRef.current = true
     aiDelayResolverRef.current?.()
+    cardChoiceResolverRef.current?.()
     activeRunRef.current = false
-    setPositions(players.map(() => 0))
+    updatePositions(players.map(() => 0))
     setCurrentPlayerIndex(0)
     setPhase('ready')
     setLatestRoll(null)
@@ -227,7 +274,14 @@ function App() {
   }
 
   const primaryButtonText =
-    phase === 'ready' ? 'Roll Dice' : phase === 'ai-delay' ? 'Fast Forward' : 'Skip Move'
+    phase === 'ready'
+      ? 'Roll Dice'
+      : phase === 'ai-delay'
+        ? 'Fast Forward'
+        : phase === 'card-choice'
+          ? 'Choose Card'
+          : 'Skip Move'
+  const activeTile = boardTiles[positions[currentPlayerIndex]]
 
   return (
     <main className="game-shell">
@@ -235,14 +289,16 @@ function App() {
         {Array.from({ length: tileCount }, (_, tile) => {
           const occupants = tileOccupants[tile] ?? []
           const isCorner = tile === 0 || tile === 10 || tile === 20 || tile === 30
+          const tileData = boardTiles[tile]
 
           return (
             <div
-              className={`tile ${isCorner ? 'corner-tile' : ''} ${tile === 0 ? 'start-tile' : ''}`}
+              className={`tile tile-${tileData.category} ${isCorner ? 'corner-tile' : ''} ${tile === 0 ? 'start-tile' : ''}`}
               key={tile}
               style={getTileGridPosition(tile)}
             >
               <span className="tile-number">{tile.toString().padStart(2, '0')}</span>
+              <span className="tile-name">{tileData.name}</span>
               <div className="tokens">
                 {occupants.map((playerIndex) => {
                   const player = players[playerIndex]
@@ -278,15 +334,52 @@ function App() {
             <div className="total">Total {latestRoll?.total ?? '-'}</div>
           </div>
 
-          <button className="primary-action" type="button" onClick={handlePrimaryAction}>
+          <button
+            className="primary-action"
+            type="button"
+            disabled={phase === 'card-choice'}
+            onClick={handlePrimaryAction}
+          >
             {primaryButtonText}
           </button>
+
+          {phase === 'card-choice' && (
+            <div className="card-choice" aria-label="Action card choices">
+              <span>Choose one card</span>
+              <div className="action-cards">
+                {actionCards.map((card) => (
+                  <button
+                    className="action-card"
+                    key={card.id}
+                    type="button"
+                    onClick={() => resolveCardChoice(`Selected ${card.title}.`)}
+                  >
+                    <strong>{card.title}</strong>
+                    <p>{card.description}</p>
+                  </button>
+                ))}
+              </div>
+              <button
+                className="skip-card"
+                type="button"
+                onClick={() => resolveCardChoice('Skipped card choice.')}
+              >
+                ไม่เล่นการ์ด
+              </button>
+            </div>
+          )}
 
           <button className="secondary-action" type="button" onClick={resetGame}>
             Reset
           </button>
 
           <p className="status-text">{status}</p>
+
+          <div className="tile-detail" aria-label="Current tile details">
+            <span>{activeTile.zone}</span>
+            <strong>{activeTile.name}</strong>
+            <p>{activeTile.description}</p>
+          </div>
 
           <div className="player-list" aria-label="Players">
             {players.map((player, index) => (
