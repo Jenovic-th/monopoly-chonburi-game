@@ -36,25 +36,42 @@
 - [x] Make AI skip action-card UI for now.
 - [x] Fix card display detection after movement.
 - [x] Improve player token visibility and grouping.
+- [x] Add Burapha University special card flow.
+- [x] Add 2-turn study skip for Burapha University.
+- [x] Require landing on Burapha University again before master degree option appears.
+- [x] Add placeholder alumni fee card after master degree is completed.
+- [x] Add Investment Bank visit tracking per character.
+- [x] Add Investment Bank unlock ranges:
+  - visit 1: normal tiles `01-09`
+  - visit 2: normal tiles `01-19`
+  - visit 3: normal tiles `01-29`
+  - visit 4+: normal tiles `01-39`
+- [x] Exclude special tiles from Investment Bank investment choices.
+- [x] Add placeholder investment target selection UI.
+- [x] Add placeholder 3-plan investment cards after choosing an investment target.
+- [x] Keep AI Investment Bank behavior as status-only for now.
 
 ## Next
 
+- [ ] Add player money/cash state.
+- [ ] Decide starting cash amount.
+- [ ] Deduct placeholder investment costs from player cash.
+- [ ] Store selected investments per player and per tile.
+- [ ] Decide when investment income is paid.
+- [ ] Pay investment income from stored investments.
+- [ ] Decide whether investment cards should vary by tile category or zone.
+- [ ] Decide if multiple players can invest on the same tile.
+- [ ] Decide what happens if a land owner buys a tile that already has investments.
 - [ ] Decide what the 3 action cards should actually do.
 - [ ] Decide whether card choices should depend on tile category.
 - [ ] Decide whether AI should choose cards automatically.
 - [ ] Add real card result display after selecting a card.
-- [ ] Add player money system.
-- [ ] Decide starting money amount.
 - [ ] Add tile value and purchase price.
-- [ ] Add small-business investment system for tiles.
-- [ ] Define income per round from small-business investments.
 - [ ] Add ownership system for land.
 - [ ] Add rent system.
 - [ ] Decide how land owners interact with small businesses on their land.
 - [ ] Add behavior for special tiles:
-  - Investment Bank
   - Political Event
-  - Burapha University
   - Chonburi Prison
   - Local Power Broker
 - [ ] Add simple AI economic decisions.
@@ -67,6 +84,8 @@
 - [ ] Should players be allowed to invest on unowned land only, or also on owned land with a fee?
 - [ ] If a player buys land that already has another player's business, can the owner remove it, tax it, or buy it out?
 - [ ] Should each normal tile always offer the same 3 cards, or should the cards vary by zone/category?
+- [ ] Should Investment Bank investment cards use the same 3 plan cards everywhere, or vary by location?
+- [ ] Should AI players use Investment Bank choices automatically later?
 - [ ] Should special tiles use cards too, or have their own dedicated UI?
 - [ ] What should happen when a player lands on Political Event?
 - [ ] What should happen when a player lands on Chonburi Prison?
@@ -75,8 +94,8 @@
 ## Handoff Notes
 
 - Current active branch: `main`.
-- Latest pushed commit at the time of this note:
-  - `f06c2e5 Add Chonburi board tiles and card choice UI`
+- Latest pushed commit:
+  - Check with `git log -1 --oneline` after pulling.
 - If continuing on another computer:
   - `git pull origin main`
   - `npm.cmd install`
@@ -85,3 +104,5 @@
   - `DEVLOG.md`
   - `TODO.md`
   - `src/boardData.ts`
+  - `src/App.tsx`
+  - `src/App.css`

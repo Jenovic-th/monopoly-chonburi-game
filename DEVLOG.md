@@ -2,6 +2,107 @@
 
 ## 2026-05-22
 
+### Latest handoff status
+
+- Current milestone: Demo 0.3, special-tile prototype and investment placeholder flow.
+- Repository:
+  - https://github.com/Jenovic-th/monopoly-chonburi-game
+- To see the newest commit on another computer after pulling:
+  - `git log -1 --oneline`
+
+### Added after Demo 0.2
+
+- Added special behavior for `10` Burapha University:
+  - first time the human player lands on tile `10`, a study card appears,
+  - choosing to study skips the human player for 2 future human turns,
+  - AI players continue taking turns while the human player is studying,
+  - after bachelor study is completed, the player must land on tile `10` again to see the master degree option,
+  - choosing master degree also skips 2 future human turns,
+  - after master degree is completed, landing on tile `10` shows the placeholder alumni fee card:
+    - `Alumni fee 0000`,
+  - no grade/result system exists yet,
+  - no money is charged yet.
+- Added special behavior for `00` Investment Bank:
+  - starting on tile `00` at game start does not count,
+  - only landing exactly on tile `00` after moving counts as an Investment Bank visit,
+  - visit counts are tracked per character:
+    - Player,
+    - AI 1,
+    - AI 2,
+  - human player sees an Investment Bank choice UI,
+  - AI players only show a short status message for now.
+- Investment Bank unlock ranges:
+  - visit 1 unlocks normal tiles `01-09`, excluding special tile `05`,
+  - visit 2 unlocks normal tiles `01-19`, excluding special tiles `05`, `10`,
+  - visit 3 unlocks normal tiles `01-29`, excluding special tiles `05`, `10`, `20`,
+  - visit 4 and later unlock normal tiles `01-39`, excluding special tiles `05`, `10`, `20`, `30`.
+- Added placeholder investment plan cards after the player selects an unlocked tile:
+  - `Small Stall`
+    - cost placeholder: `30,000`
+    - income placeholder: `3,000 / round`
+  - `Local Shop`
+    - cost placeholder: `120,000`
+    - income placeholder: `12,000 / round`
+  - `Anchor Business`
+    - cost placeholder: `500,000`
+    - income placeholder: `55,000 / round`
+- Investment plan cards are UI-only for now:
+  - selecting a plan only updates the status message,
+  - no money is deducted,
+  - no income is paid,
+  - no business ownership is saved yet.
+
+### Current important gameplay flow
+
+- Human player presses `Roll Dice`.
+- Human player moves based on two random dice.
+- If the human player lands on a normal tile, the basic 3-card placeholder UI appears.
+- If the human player lands on `00`, Investment Bank unlock selection appears.
+- If the human player selects an Investment Bank target tile, 3 investment plan cards appear.
+- If the human player lands on `10`, Burapha University study flow appears.
+- AI players roll and move automatically.
+- AI players do not open card UIs yet.
+
+### Files most relevant for the next session
+
+- `src/App.tsx`
+  - turn flow,
+  - phase handling,
+  - card UI state,
+  - Burapha University logic,
+  - Investment Bank logic.
+- `src/App.css`
+  - board layout,
+  - token visibility,
+  - normal card UI,
+  - education card UI,
+  - investment card UI.
+- `src/boardData.ts`
+  - 40 Chonburi board tiles,
+  - tile names,
+  - zones,
+  - categories,
+  - descriptions.
+- `TODO.md`
+  - next implementation list.
+
+### Recommended next development step
+
+- Add the real money system before making investment cards permanent:
+  - player cash,
+  - starting cash,
+  - investment cost deduction,
+  - stored business investments,
+  - income payout timing.
+- Do not add land ownership/rent until the investment state is stable.
+
+### Verified for this handoff
+
+- `npm.cmd run build` passed.
+- `npm.cmd run lint` passed.
+- Local app was reloaded in the in-app browser at:
+  - http://127.0.0.1:5173/
+
 ### Current project status
 
 - Demo 0.2 is now focused on Chonburi board data and first-pass card choice UI.

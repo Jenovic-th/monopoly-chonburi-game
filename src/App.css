@@ -387,6 +387,218 @@ button {
   font-size: clamp(13px, 1.6vmin, 16px);
 }
 
+.investment-choice {
+  display: grid;
+  gap: 8px;
+}
+
+.investment-choice > span {
+  color: #5b6870;
+  font-size: clamp(11px, 1.35vmin, 13px);
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.investment-card {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  border: 2px solid #173f4f;
+  border-radius: 7px;
+  background: #e9f8ff;
+  color: #132b35;
+  box-shadow: 0 4px 0 #173f4f;
+  text-align: left;
+}
+
+.investment-card > strong {
+  font-size: clamp(15px, 2vmin, 20px);
+  line-height: 1.1;
+}
+
+.investment-card p {
+  margin: 0;
+  color: #405b66;
+  font-size: clamp(12px, 1.5vmin, 15px);
+  font-weight: 700;
+  line-height: 1.25;
+}
+
+.investment-options {
+  max-height: clamp(118px, 18vmin, 190px);
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 7px;
+  overflow: auto;
+  padding-right: 3px;
+}
+
+.investment-options button {
+  min-height: 42px;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  gap: 7px;
+  padding: 7px 8px;
+  border: 1px solid rgba(23, 63, 79, 0.45);
+  background: #ffffff;
+  color: #17303a;
+  text-align: left;
+}
+
+.investment-options span {
+  font-size: clamp(12px, 1.45vmin, 14px);
+  font-weight: 900;
+}
+
+.investment-options strong {
+  min-width: 0;
+  font-size: clamp(11px, 1.35vmin, 13px);
+  line-height: 1.1;
+  overflow-wrap: anywhere;
+}
+
+.skip-investment {
+  min-height: 36px;
+  background: transparent;
+  color: #17303a;
+  border: 1px dashed rgba(23, 63, 79, 0.5);
+  font-size: clamp(13px, 1.6vmin, 16px);
+}
+
+.investment-plan-choice {
+  display: grid;
+  gap: 8px;
+}
+
+.investment-plan-choice > span {
+  color: #5b6870;
+  font-size: clamp(11px, 1.35vmin, 13px);
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.investment-plan-card {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  border: 2px solid #28451e;
+  border-radius: 7px;
+  background: #edf9e7;
+  color: #1c3216;
+  box-shadow: 0 4px 0 #28451e;
+  text-align: left;
+}
+
+.investment-plan-card > strong {
+  font-size: clamp(15px, 2vmin, 20px);
+  line-height: 1.1;
+}
+
+.investment-plan-card > p {
+  margin: 0;
+  color: #465c3e;
+  font-size: clamp(12px, 1.5vmin, 15px);
+  font-weight: 700;
+  line-height: 1.25;
+}
+
+.investment-plans {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.investment-plans button {
+  min-height: 136px;
+  padding: 10px;
+  display: grid;
+  align-content: start;
+  gap: 5px;
+  border: 2px solid #28451e;
+  background: #ffffff;
+  color: #1c3216;
+  box-shadow: 0 3px 0 #28451e;
+  text-align: left;
+}
+
+.investment-plans button > strong {
+  font-size: clamp(12px, 1.55vmin, 15px);
+  line-height: 1.08;
+}
+
+.investment-plans button > span {
+  color: #36572a;
+  font-size: clamp(10px, 1.25vmin, 12px);
+  font-weight: 900;
+  line-height: 1.1;
+}
+
+.investment-plans button > p {
+  margin: 0;
+  color: #52624c;
+  font-size: clamp(10px, 1.25vmin, 12px);
+  font-weight: 700;
+  line-height: 1.15;
+}
+
+.education-choice {
+  display: grid;
+  gap: 8px;
+}
+
+.education-choice > span {
+  color: #5b6870;
+  font-size: clamp(11px, 1.35vmin, 13px);
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.education-card {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  border: 2px solid #3e2f77;
+  border-radius: 7px;
+  background: #f3ecff;
+  color: #201838;
+  box-shadow: 0 4px 0 #3e2f77;
+  text-align: left;
+}
+
+.education-card strong {
+  font-size: clamp(15px, 2vmin, 20px);
+  line-height: 1.1;
+}
+
+.education-card p {
+  margin: 0;
+  color: #51466b;
+  font-size: clamp(12px, 1.5vmin, 15px);
+  font-weight: 700;
+  line-height: 1.25;
+}
+
+.education-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.education-actions button {
+  min-height: 40px;
+  padding: 0 10px;
+  background: #3e2f77;
+  color: #ffffff;
+  font-size: clamp(13px, 1.55vmin, 16px);
+}
+
+.education-actions .education-skip {
+  background: transparent;
+  color: #34285f;
+  border: 1px dashed rgba(62, 47, 119, 0.48);
+}
+
 .tile-detail {
   display: grid;
   gap: 3px;
@@ -435,6 +647,56 @@ button {
 .legend-token {
   position: static;
   justify-self: center;
+}
+
+.education-status {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border: 1px solid rgba(62, 47, 119, 0.22);
+  border-radius: 7px;
+  background: rgba(243, 236, 255, 0.7);
+  color: #34285f;
+  text-align: left;
+}
+
+.education-status span {
+  color: #5c5277;
+  font-size: clamp(11px, 1.35vmin, 13px);
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.education-status strong {
+  font-size: clamp(12px, 1.5vmin, 15px);
+  line-height: 1.15;
+}
+
+.investment-status {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border: 1px solid rgba(23, 63, 79, 0.22);
+  border-radius: 7px;
+  background: rgba(233, 248, 255, 0.75);
+  color: #17303a;
+  text-align: left;
+}
+
+.investment-status span {
+  color: #476672;
+  font-size: clamp(11px, 1.35vmin, 13px);
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.investment-status strong {
+  font-size: clamp(11px, 1.35vmin, 14px);
+  line-height: 1.15;
 }
 
 .history {
