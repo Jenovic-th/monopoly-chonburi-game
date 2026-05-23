@@ -37,9 +37,69 @@
 - [x] Fix card display detection after movement.
 - [x] Improve player token visibility and grouping.
 - [x] Add Burapha University special card flow.
-- [x] Add 2-turn study skip for Burapha University.
+- [x] Add 5-turn study skip for Burapha University.
 - [x] Require landing on Burapha University again before master degree option appears.
 - [x] Add placeholder alumni fee card after master degree is completed.
+- [x] Set education income bonus rules:
+  - bachelor completed: business income +15%
+  - master completed: business income +30%
+- [x] Add business card economy concept data:
+  - starting cash target: `100,000`
+  - zone 1 prices: `10,000 / 35,000 / 80,000`
+  - zone 2 prices: `15,000 / 45,000 / 100,000`
+  - zone 3 prices: `20,000 / 60,000 / 120,000`
+  - zone 4 prices: `30,000 / 80,000 / 150,000`
+  - income rates: small 12%, medium 10%, large 9%
+  - upgrade multiplier target: level 1 `x1`, level 2 `x1.8`, level 3 `x2.5`
+- [x] Add land buyout price data and UI labels:
+  - special tiles are not purchasable
+  - zone 1 land starts around `750,000-1,100,000`
+  - zone 2 land starts around `1,100,000-1,800,000`
+  - zone 3 land starts around `1,500,000-2,800,000`
+  - zone 4 land starts around `2,000,000-4,000,000`
+- [x] Add player cash state:
+  - starting cash `100,000`
+  - reset restores all players to `100,000`
+  - player panel shows cash
+- [x] Convert normal business card choices into real purchases:
+  - buying deducts cash
+  - insufficient cash disables unaffordable cards
+  - purchased businesses are stored as level 1 holdings
+  - board shows business ownership markers on tiles
+- [x] Add business upgrade levels 1-3:
+  - returning to the same tile upgrades an owned card instead of creating duplicates
+  - upgrade cost is the same as the original card price
+  - level 1 income multiplier: `x1`
+  - level 2 income multiplier: `x1.8`
+  - level 3 income multiplier: `x2.5`
+  - max-level cards are disabled
+- [x] Add pass-start income:
+  - passing or landing on tile `00` pays `20,000`
+  - business income is paid at the same time
+  - business level multipliers affect income
+  - bachelor/master income bonus applies to human business income
+- [x] Record victory concept:
+  - v1 target is Net Worth after a fixed number of completed laps/rounds
+  - Net Worth should include cash, business investment value, and land value later
+- [x] Fix Investment Bank business cards to use the real business purchase/upgrade flow.
+- [x] Constrain center panel and roll history so repeated rolls do not push the board layout.
+- [x] Redesign game UI layout:
+  - board is now a fixed, dedicated surface
+  - controls and details are moved into a side panel
+  - panel content scrolls internally instead of resizing the board
+  - card choices are stacked vertically for better readability
+- [x] Redesign game UI into board console + player ledger tabs:
+  - turn/dice/action cards/current tile details live inside the board center
+  - side panel is now dedicated to player tabs
+  - selected player card shows cash, tile, income, bank visits, education, and business list
+  - future land, influence cards, and net worth have a reserved section
+- [x] Move decision cards into popup modals:
+  - normal business cards, Investment Bank choices, Burapha study choices, and Local Power Broker offers no longer stretch the board center
+  - the board center now stays compact with turn, dice, action, status, and current tile summary only
+  - choosing or skipping a popup option dismisses the modal and continues the turn flow
+- [x] Improve board token and modal card readability:
+  - board tokens are constrained inside each tile instead of using a centered minimum-width pill
+  - modal cards are vertical and emphasize price/income values
 - [x] Add Investment Bank visit tracking per character.
 - [x] Add Investment Bank unlock ranges:
   - visit 1: normal tiles `01-09`
@@ -50,15 +110,76 @@
 - [x] Add placeholder investment target selection UI.
 - [x] Add placeholder 3-plan investment cards after choosing an investment target.
 - [x] Keep AI Investment Bank behavior as status-only for now.
+- [x] Add Local Power Broker concept UI:
+  - landing on tile `30` shows 2 random influence card offers
+  - player can choose 1 card or walk away
+  - unchosen offer disappears after selection
+  - effects, prices, inventory, and jail-risk roll are placeholders for later
+- [x] Add influence card inventory v1:
+  - influence cards now cost `300,000-500,000`
+  - buying a card deducts cash and stores it in the player's hand
+  - players can hold up to 3 influence cards
+  - player tabs show held influence cards
+  - card effects and 20% jail-risk-on-use are still future work
+- [x] Clean up player detail panel:
+  - removed tile, bank visit, current location, and recent roll details from the side panel
+  - business, land, and influence details now open in popup modals
+  - side panel now focuses on cash, income, education, active income events, and summary buttons
+- [x] Add Political Event v1 for tile `05`:
+  - landing on tile `05` draws 1 of 4 reusable event cards
+  - COVID-19 makes every player's next business income collection pay 20%
+  - Weak Baht makes industrial/port business income pay 140% on the next income collection
+  - Tourism Boom makes tourism/market business income pay 150% on the next income collection
+  - Thai Chuai Thai Stimulus immediately gives every player `30,000`
+  - percentage events are tracked per player and expire after that player next collects income at tile `00`
+- [x] Move lottery into Political Event:
+  - Underground Lottery is now a tile `05` event, not an influence card for sale
+  - drawing it claims the current Prison Jackpot and resets the jackpot to `0`
+  - if the jackpot is empty, the event resolves with no payout
+  - Prison Jackpot is now displayed in the board console
+- [x] Add prototype test move controls:
+  - buttons `1-12` let the human player move a chosen number of spaces instead of using random dice
+  - random dice roll remains available
+  - test move uses the normal turn flow so tile effects still trigger
+- [x] Add prototype cash tools:
+  - Player can receive `+100K`, `+500K`, or `+1M`
+  - all players can receive `+500K`
+  - tools are for quickly testing land purchase and rent balance
+- [x] Add land ownership purchase flow v1:
+  - clicking a board tile opens land detail / buyout modal while the game is ready
+  - buying land deducts cash and stores the land owner
+  - owned land shows an owner badge on the board
+  - player tabs show land owned by the selected player
+- [x] Add land rent v1:
+  - rent is only paid when a tile has a land owner
+  - business owners do not collect rent unless they also own the land
+  - rent is `3%` of land price
+  - if the visitor cannot afford full rent, they pay all remaining cash
+- [x] Record future land lease-share rule:
+  - if land policy is `Open Lease`, other players may place or upgrade businesses there
+  - when a tenant collects business income at tile `00`, 10% of that tenant business income goes to the land owner
+  - lease share is paid only during income collection at tile `00`, not every movement turn
+  - businesses on owned-by-self land or unowned land do not pay lease share
+- [x] Add Investment Bank back navigation:
+  - after opening a target tile's business cards, Back returns to the tile list without spending the Investment Bank opportunity
+  - Skip investment still ends the opportunity
 
 ## Next
 
-- [ ] Add player money/cash state.
-- [ ] Decide starting cash amount.
-- [ ] Deduct placeholder investment costs from player cash.
-- [ ] Store selected investments per player and per tile.
-- [ ] Decide when investment income is paid.
-- [ ] Pay investment income from stored investments.
+- [x] Add player money/cash state.
+- [x] Decide starting cash amount.
+- [x] Deduct placeholder investment costs from player cash.
+- [x] Store selected investments per player and per tile.
+- [x] Convert business card choices into real purchases.
+- [x] Add business upgrade levels 1-3 when returning to the same tile.
+- [x] Decide when investment income is paid.
+- [x] Pay investment income from stored investments.
+- [x] Add land ownership purchase flow.
+- [x] Add board ownership markers for land owners.
+- [ ] Decide land rent and eviction/seizure rules.
+- [x] Apply education income bonus when business income is paid.
+- [ ] Add game end tracking and Net Worth winner screen.
+- [ ] Refine responsive board/panel proportions after more playtesting.
 - [ ] Decide whether investment cards should vary by tile category or zone.
 - [ ] Decide if multiple players can invest on the same tile.
 - [ ] Decide what happens if a land owner buys a tile that already has investments.
@@ -66,14 +187,13 @@
 - [ ] Decide whether card choices should depend on tile category.
 - [ ] Decide whether AI should choose cards automatically.
 - [ ] Add real card result display after selecting a card.
-- [ ] Add tile value and purchase price.
-- [ ] Add ownership system for land.
-- [ ] Add rent system.
+- [x] Add tile value and purchase price.
+- [x] Add ownership system for land.
+- [x] Add rent system.
 - [ ] Decide how land owners interact with small businesses on their land.
 - [ ] Add behavior for special tiles:
-  - Political Event
   - Chonburi Prison
-  - Local Power Broker
+- [ ] Add real Local Power Broker card effects, prices, card inventory, and 20% jail-risk roll.
 - [ ] Add simple AI economic decisions.
 - [ ] Update README with setup, dev, and project overview.
 

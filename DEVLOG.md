@@ -14,14 +14,17 @@
 
 - Added special behavior for `10` Burapha University:
   - first time the human player lands on tile `10`, a study card appears,
-  - choosing to study skips the human player for 2 future human turns,
+  - choosing to study skips the human player for 5 future human turns,
   - AI players continue taking turns while the human player is studying,
   - after bachelor study is completed, the player must land on tile `10` again to see the master degree option,
-  - choosing master degree also skips 2 future human turns,
+  - choosing master degree also skips 5 future human turns,
+  - bachelor completion is the baseline rule for future business income +15%,
+  - master completion upgrades that future business income bonus to +30%,
   - after master degree is completed, landing on tile `10` shows the placeholder alumni fee card:
     - `Alumni fee 0000`,
   - no grade/result system exists yet,
-  - no money is charged yet.
+  - no education fee is charged yet,
+  - the income bonus applies when business income is paid at tile `00`.
 - Added special behavior for `00` Investment Bank:
   - starting on tile `00` at game start does not count,
   - only landing exactly on tile `00` after moving counts as an Investment Bank visit,
@@ -30,27 +33,138 @@
     - AI 1,
     - AI 2,
   - human player sees an Investment Bank choice UI,
+  - choosing an unlocked tile now opens the same real business purchase/upgrade cards used by normal landings,
+  - existing player businesses on the selected tile appear as current levels and can be upgraded,
   - AI players only show a short status message for now.
 - Investment Bank unlock ranges:
   - visit 1 unlocks normal tiles `01-09`, excluding special tile `05`,
   - visit 2 unlocks normal tiles `01-19`, excluding special tiles `05`, `10`,
   - visit 3 unlocks normal tiles `01-29`, excluding special tiles `05`, `10`, `20`,
   - visit 4 and later unlock normal tiles `01-39`, excluding special tiles `05`, `10`, `20`, `30`.
-- Added placeholder investment plan cards after the player selects an unlocked tile:
-  - `Small Stall`
-    - cost placeholder: `30,000`
-    - income placeholder: `3,000 / round`
-  - `Local Shop`
-    - cost placeholder: `120,000`
-    - income placeholder: `12,000 / round`
-  - `Anchor Business`
-    - cost placeholder: `500,000`
-    - income placeholder: `55,000 / round`
-- Investment plan cards are UI-only for now:
-  - selecting a plan only updates the status message,
-  - no money is deducted,
-  - no income is paid,
-  - no business ownership is saved yet.
+- Investment Bank business cards now use the real business economy:
+  - selecting a plan deducts cash,
+  - new businesses are stored as level 1,
+  - existing matching businesses upgrade instead of duplicating,
+  - max-level and unaffordable cards are disabled.
+- Added business card economy concept data:
+  - normal tile card choices now show category-based business concepts instead of generic placeholder cards,
+  - prices are currently based on zone, not individual tile names:
+    - Bangsaen + Nong Mon: `10,000 / 35,000 / 80,000`,
+    - Sriracha + Laem Chabang: `15,000 / 45,000 / 100,000`,
+    - Amata City + Phan Thong: `20,000 / 60,000 / 120,000`,
+    - Pattaya: `30,000 / 80,000 / 150,000`,
+  - income rates are small 12%, medium 10%, large 9%,
+  - future upgrade target is level 1 `x1`, level 2 `x1.8`, level 3 `x2.5`,
+  - starting cash target is `100,000`,
+  - business names are temporary concept labels and can be renamed later.
+- Added land buyout price data and first UI pass:
+  - special tiles are not purchasable,
+  - normal tiles show land buyout prices on the board and in the current tile detail panel,
+  - land prices are intentionally expensive so land ownership becomes a mid/late-game power move,
+  - zone 1 land starts around `750,000-1,100,000`,
+  - zone 2 land starts around `1,100,000-1,800,000`,
+  - zone 3 land starts around `1,500,000-2,800,000`,
+  - zone 4 land starts around `2,000,000-4,000,000`,
+  - actual land purchasing, owner markers, rent, eviction, and business seizure are not implemented yet.
+- Added player cash and business purchase v1:
+  - every player starts with `100,000`,
+  - reset restores each player to `100,000`,
+  - player panel now shows current cash,
+  - choosing a normal tile business card deducts the card price,
+  - unaffordable business cards are disabled,
+  - successful purchases are stored as level 1 business holdings,
+  - purchased businesses display as small colored markers on the tile,
+  - marker color follows the owning player and the marker number shows the current business level,
+  - returning to a tile with the same owned business card upgrades it instead of creating a duplicate,
+  - upgrades cost the original card price again,
+  - upgrade income targets are level 1 `x1`, level 2 `x1.8`, level 3 `x2.5`,
+  - max-level cards are disabled,
+  - AI players do not buy business cards yet,
+  - passing or landing on `00` pays `20,000`,
+  - business income is paid when passing or landing on `00`,
+  - business level multipliers affect paid income,
+  - human bachelor/master bonuses now apply to business income payouts.
+- Recorded victory concept:
+  - v1 game end should use Net Worth after a fixed number of completed laps/rounds,
+  - Net Worth should include cash, business investment value, and land value later,
+  - no game end screen or winner calculation is implemented yet.
+- Fixed center board layout:
+  - the control panel now scrolls internally when content is tall,
+  - recent roll history has a capped height so repeated turns do not push the board down.
+- Redesigned the main game layout:
+  - the board is now a dedicated fixed-size surface,
+  - controls, current tile details, player cash, education status, investment status, and roll history now live in a side panel,
+  - the side panel scrolls internally instead of changing board size,
+  - business, investment, and influence card choices are stacked vertically to keep the panel compact and readable,
+  - mobile/narrow screens fall back to a single-column board-over-panel layout.
+- Reworked the UI into a board console plus player ledger:
+  - turn, dice, reset, status, and a compact current tile summary are inside the board center,
+  - the side panel now uses player tabs for `Player`, `AI 1`, and `AI 2`,
+  - the selected player card shows role, cash, position, estimated income per round, Investment Bank visits, current location, education status, and owned businesses,
+  - a placeholder future section is reserved for land owned, influence cards, and net worth.
+- Moved decision UI into popup modals:
+  - normal business cards, Investment Bank target choices, Investment Bank plan choices, Burapha University study choices, and Local Power Broker offers now open over the board,
+  - the board no longer grows taller when card choices appear,
+  - choosing or skipping a modal option dismisses the popup and continues the same turn flow.
+- Improved UI readability:
+  - board tokens are constrained inside each tile and reduced slightly so they do not spill outside tight edge tiles,
+  - business and influence modal cards now stack vertically,
+  - price/income/risk values are presented as larger blocks for faster reading during play.
+- Added `05` Political Event v1:
+  - landing on tile `05` draws 1 of 5 reusable event cards,
+  - `COVID-19` reduces every player's next business income collection to 20%,
+  - `Weak Baht` increases industrial/port business income to 140% on each player's next income collection,
+  - `Tourism Boom` increases tourism/market business income to 150% on each player's next income collection,
+  - `Thai Chuai Thai Stimulus` immediately gives every player `30,000`,
+  - `Underground Lottery` claims the current Prison Jackpot and resets it to `0`,
+  - percentage events are tracked per player and expire individually when that player next collects income at tile `00`,
+  - player tabs now show any active next-income event for the selected player,
+  - the board console now displays the current Prison Jackpot.
+- Added prototype test move controls:
+  - the board console now has buttons `1-12` to move the human player by a chosen number of spaces,
+  - the random `Roll Dice` button remains available,
+  - forced test moves run through the same turn flow as dice rolls so landing effects, popups, AI turns, and income still trigger normally.
+- Added prototype cash tools:
+  - the board console now has `+100K`, `+500K`, and `+1M` buttons for the human player,
+  - `All +500K` gives every player cash at once,
+  - these controls are intentionally dev-only helpers for testing land purchases, rent, and high-price balance without grinding rounds.
+- Added land ownership purchase v1:
+  - clicking a board tile while the game is ready opens a land detail / buyout modal,
+  - buying land deducts the tile land price from the current player,
+  - land ownership is stored separately from business holdings,
+  - owned land shows an owner badge on the board using the owner's player color,
+  - player tabs now list land owned by the selected player,
+  - rent, eviction, seizure, and owner interactions are still not implemented.
+- Added land rent v1:
+  - rent is paid only to land owners, not business owners,
+  - rent triggers when a player lands on land owned by another player,
+  - starting formula is `3%` of land price,
+  - if the visitor has less cash than the rent due, they pay all remaining cash,
+  - bankruptcy, eviction, business seizure, and owner settings are still future systems.
+- Recorded future `Open Lease` concept:
+  - a land owner may later allow other players to place or upgrade businesses on their land,
+  - when a tenant collects business income at tile `00`, 10% of that tenant business income should be paid to the land owner,
+  - this lease share should be collected only during tile `00` income collection, not every movement turn,
+  - businesses on self-owned land or unowned land should not pay lease share.
+- Improved Investment Bank navigation:
+  - after selecting a target tile, the business-card modal now has `Back to tile list`,
+  - backing out keeps the current Investment Bank opportunity alive,
+  - `Skip investment` remains the explicit way to end the opportunity without buying/upgrading.
+- Added concept behavior for `30` Local Power Broker:
+  - human player sees 2 random influence card offers after landing on tile `30`,
+  - player can buy 1 offer or walk away,
+  - influence cards now cost `300,000-500,000`,
+  - buying a card deducts cash and stores it in the player's hand,
+  - players can hold at most 3 influence cards,
+  - player tabs now show held influence cards,
+  - the offer UI disappears after the choice and the turn flow continues,
+  - offers can appear again in later visits because the prototype samples from the full card pool each time,
+  - AI players show a status message and skip influence cards for now,
+  - real card effects and the future 20% jail-risk-on-use roll are not implemented yet.
+- Cleaned up the player detail panel:
+  - removed tile, Bank visits, current location, and recent roll history from the side panel,
+  - the side panel now keeps only high-signal status: cash, income per round, education, active income events, and summary buttons,
+  - Businesses, Land, and Influence Cards now open in dedicated detail modals.
 
 ### Current important gameplay flow
 

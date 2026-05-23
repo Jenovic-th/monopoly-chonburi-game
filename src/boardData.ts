@@ -25,6 +25,7 @@ export type BoardTile = {
   zone: string
   category: TileCategory
   description: string
+  landPrice?: number
 }
 
 export const boardTiles: BoardTile[] = [
@@ -41,6 +42,7 @@ export const boardTiles: BoardTile[] = [
     zone: 'Bangsaen + Nong Mon',
     category: 'market',
     description: 'Japanese-style seafood market with strong food business potential.',
+    landPrice: 850000,
   },
   {
     id: 2,
@@ -48,6 +50,7 @@ export const boardTiles: BoardTile[] = [
     zone: 'Bangsaen + Nong Mon',
     category: 'viewpoint',
     description: 'Hilltop viewpoint with local monkeys, cafes, and Bangsaen sea views.',
+    landPrice: 800000,
   },
   {
     id: 3,
@@ -55,6 +58,7 @@ export const boardTiles: BoardTile[] = [
     zone: 'Bangsaen + Nong Mon',
     category: 'beach',
     description: 'Evening street food and beach hangout area popular with younger crowds.',
+    landPrice: 900000,
   },
   {
     id: 4,
@@ -62,6 +66,7 @@ export const boardTiles: BoardTile[] = [
     zone: 'Bangsaen + Nong Mon',
     category: 'road',
     description: 'Scenic seaside road and bridge route for coastal traffic and tourism.',
+    landPrice: 750000,
   },
   {
     id: 5,
@@ -76,6 +81,7 @@ export const boardTiles: BoardTile[] = [
     zone: 'Bangsaen + Nong Mon',
     category: 'market',
     description: 'Local souvenir and food market area, first section.',
+    landPrice: 850000,
   },
   {
     id: 7,
@@ -83,6 +89,7 @@ export const boardTiles: BoardTile[] = [
     zone: 'Bangsaen + Nong Mon',
     category: 'market',
     description: 'Local souvenir and food market area, second section.',
+    landPrice: 850000,
   },
   {
     id: 8,
@@ -90,6 +97,7 @@ export const boardTiles: BoardTile[] = [
     zone: 'Bangsaen + Nong Mon',
     category: 'beach',
     description: 'Main beachfront land, first section.',
+    landPrice: 1000000,
   },
   {
     id: 9,
@@ -97,6 +105,7 @@ export const boardTiles: BoardTile[] = [
     zone: 'Bangsaen + Nong Mon',
     category: 'beach',
     description: 'Main beachfront land, premium section of this zone.',
+    landPrice: 1100000,
   },
   {
     id: 10,
@@ -111,6 +120,7 @@ export const boardTiles: BoardTile[] = [
     zone: 'Sriracha + Laem Chabang',
     category: 'viewpoint',
     description: 'Large reservoir area for nature, exercise, and weekend traffic.',
+    landPrice: 1100000,
   },
   {
     id: 12,
@@ -118,6 +128,7 @@ export const boardTiles: BoardTile[] = [
     zone: 'Sriracha + Laem Chabang',
     category: 'wildlife',
     description: 'Former Sriracha landmark area with strong family tourism value.',
+    landPrice: 1200000,
   },
   {
     id: 13,
@@ -125,6 +136,7 @@ export const boardTiles: BoardTile[] = [
     zone: 'Sriracha + Laem Chabang',
     category: 'viewpoint',
     description: 'Seaside health park and local leisure area near Koh Loi.',
+    landPrice: 1150000,
   },
   {
     id: 14,
@@ -132,6 +144,7 @@ export const boardTiles: BoardTile[] = [
     zone: 'Sriracha + Laem Chabang',
     category: 'market',
     description: 'Japanese-style community mall and lifestyle spot in Sriracha.',
+    landPrice: 1400000,
   },
   {
     id: 15,
@@ -139,6 +152,7 @@ export const boardTiles: BoardTile[] = [
     zone: 'Sriracha + Laem Chabang',
     category: 'mall',
     description: 'Major shopping mall and commercial anchor for Sriracha.',
+    landPrice: 1800000,
   },
   {
     id: 16,
@@ -146,6 +160,7 @@ export const boardTiles: BoardTile[] = [
     zone: 'Sriracha + Laem Chabang',
     category: 'island',
     description: 'Island destination connected to Sriracha tourism and ferry traffic.',
+    landPrice: 1350000,
   },
   {
     id: 17,
@@ -153,6 +168,7 @@ export const boardTiles: BoardTile[] = [
     zone: 'Sriracha + Laem Chabang',
     category: 'wildlife',
     description: 'Super landmark wildlife attraction with high tourism draw.',
+    landPrice: 1700000,
   },
   {
     id: 18,
@@ -160,6 +176,7 @@ export const boardTiles: BoardTile[] = [
     zone: 'Sriracha + Laem Chabang',
     category: 'industrial',
     description: 'Industrial estate area tied to factories, jobs, and regional logistics.',
+    landPrice: 1600000,
   },
   {
     id: 19,
@@ -167,6 +184,7 @@ export const boardTiles: BoardTile[] = [
     zone: 'Sriracha + Laem Chabang',
     category: 'industrial',
     description: 'Second industrial estate section with stronger production value.',
+    landPrice: 1800000,
   },
   {
     id: 20,
@@ -181,6 +199,7 @@ export const boardTiles: BoardTile[] = [
     zone: 'Amata City + Phan Thong',
     category: 'landmark',
     description: 'Iconic landmark for the Amata industrial area.',
+    landPrice: 1500000,
   },
   {
     id: 22,
@@ -188,6 +207,7 @@ export const boardTiles: BoardTile[] = [
     zone: 'Amata City + Phan Thong',
     category: 'market',
     description: 'Large worker and local market tied to the industrial economy.',
+    landPrice: 1600000,
   },
   {
     id: 23,
@@ -195,6 +215,7 @@ export const boardTiles: BoardTile[] = [
     zone: 'Amata City + Phan Thong',
     category: 'industrial',
     description: 'Industrial zone near the Chonburi manufacturing corridor, first section.',
+    landPrice: 1800000,
   },
   {
     id: 24,
@@ -202,6 +223,7 @@ export const boardTiles: BoardTile[] = [
     zone: 'Amata City + Phan Thong',
     category: 'industrial',
     description: 'Industrial zone near the Chonburi manufacturing corridor, second section.',
+    landPrice: 1900000,
   },
   {
     id: 25,
@@ -209,6 +231,7 @@ export const boardTiles: BoardTile[] = [
     zone: 'Amata City + Phan Thong',
     category: 'industrial',
     description: 'Multinational technology factory area with high production value.',
+    landPrice: 2200000,
   },
   {
     id: 26,
@@ -216,6 +239,7 @@ export const boardTiles: BoardTile[] = [
     zone: 'Amata City + Phan Thong',
     category: 'industrial',
     description: 'Second multinational technology factory area with strong rental potential.',
+    landPrice: 2300000,
   },
   {
     id: 27,
@@ -223,6 +247,7 @@ export const boardTiles: BoardTile[] = [
     zone: 'Amata City + Phan Thong',
     category: 'industrial',
     description: 'Major industrial estate land, first section.',
+    landPrice: 2400000,
   },
   {
     id: 28,
@@ -230,6 +255,7 @@ export const boardTiles: BoardTile[] = [
     zone: 'Amata City + Phan Thong',
     category: 'industrial',
     description: 'Major industrial estate land, second section.',
+    landPrice: 2500000,
   },
   {
     id: 29,
@@ -237,6 +263,7 @@ export const boardTiles: BoardTile[] = [
     zone: 'Amata City + Phan Thong',
     category: 'industrial',
     description: 'Premium industrial estate land and strongest section of this zone.',
+    landPrice: 2800000,
   },
   {
     id: 30,
@@ -251,6 +278,7 @@ export const boardTiles: BoardTile[] = [
     zone: 'Pattaya',
     category: 'market',
     description: 'Seafood market area in Naklua with strong local trading potential.',
+    landPrice: 2000000,
   },
   {
     id: 32,
@@ -258,6 +286,7 @@ export const boardTiles: BoardTile[] = [
     zone: 'Pattaya',
     category: 'market',
     description: 'Tourist market and cultural shopping destination.',
+    landPrice: 2200000,
   },
   {
     id: 33,
@@ -265,6 +294,7 @@ export const boardTiles: BoardTile[] = [
     zone: 'Pattaya',
     category: 'show',
     description: 'Famous stage show and entertainment landmark in Pattaya.',
+    landPrice: 2600000,
   },
   {
     id: 34,
@@ -272,6 +302,7 @@ export const boardTiles: BoardTile[] = [
     zone: 'Pattaya',
     category: 'beach',
     description: 'Major beach zone for tourism, restaurants, and long-stay visitors.',
+    landPrice: 2800000,
   },
   {
     id: 35,
@@ -279,6 +310,7 @@ export const boardTiles: BoardTile[] = [
     zone: 'Pattaya',
     category: 'landmark',
     description: 'Iconic cultural landmark with high tourism draw.',
+    landPrice: 3000000,
   },
   {
     id: 36,
@@ -286,6 +318,7 @@ export const boardTiles: BoardTile[] = [
     zone: 'Pattaya',
     category: 'themepark',
     description: 'Large garden and attraction complex with strong visitor volume.',
+    landPrice: 3200000,
   },
   {
     id: 37,
@@ -293,6 +326,7 @@ export const boardTiles: BoardTile[] = [
     zone: 'Pattaya',
     category: 'themepark',
     description: 'Movie-themed water park attraction near Pattaya.',
+    landPrice: 3400000,
   },
   {
     id: 38,
@@ -300,6 +334,7 @@ export const boardTiles: BoardTile[] = [
     zone: 'Pattaya',
     category: 'island',
     description: 'Island tourism destination connected to Pattaya travel routes.',
+    landPrice: 3600000,
   },
   {
     id: 39,
@@ -307,5 +342,6 @@ export const boardTiles: BoardTile[] = [
     zone: 'Pattaya',
     category: 'nightlife',
     description: 'High-traffic nightlife district with premium commercial value.',
+    landPrice: 4000000,
   },
 ]
