@@ -137,6 +137,12 @@
   - drawing it claims the current Prison Jackpot and resets the jackpot to `0`
   - if the jackpot is empty, the event resolves with no payout
   - Prison Jackpot is now displayed in the board console
+- [x] Add Chonburi Prison v1:
+  - landing on tile `20` does not send the player to prison
+  - landing on tile `20` gives a Prison Contact Coupon for 5% off the next influence card purchase
+  - coupon does not stack; holding an existing coupon keeps the current one
+  - prison skip tracking and Prison Jackpot contribution logic are ready for future jail-risk effects
+  - player panel shows prison status and coupon status
 - [x] Add prototype test move controls:
   - buttons `1-12` let the human player move a chosen number of spaces instead of using random dice
   - random dice roll remains available
@@ -191,8 +197,17 @@
 - [x] Add ownership system for land.
 - [x] Add rent system.
 - [ ] Decide how land owners interact with small businesses on their land.
-- [ ] Add behavior for special tiles:
+- [x] Add behavior for special tiles:
   - Chonburi Prison
+- [x] Show Chonburi Prison coupon in the Influence player detail popup.
+- [x] Replace player detail buttons with compact card shelves.
+- [x] Put Influence and Prison card shelves on one lower row:
+  - 3 influence slots left
+  - 1 prison/coupon card right
+- [x] Add click-to-open full detail modal for player cards.
+- [x] Widen desktop board/player layout for better readability.
+- [x] Shorten board land price labels.
+- [x] Add Net Worth ranking popup for balance testing.
 - [ ] Add real Local Power Broker card effects, prices, card inventory, and 20% jail-risk roll.
 - [ ] Add simple AI economic decisions.
 - [ ] Update README with setup, dev, and project overview.

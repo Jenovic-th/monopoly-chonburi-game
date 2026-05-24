@@ -4,11 +4,38 @@
 
 ### Latest handoff status
 
-- Current milestone: Demo 0.3, special-tile prototype and investment placeholder flow.
+- Current milestone: Demo 0.4, special-tile prototype, land systems, and influence-card scaffolding.
 - Repository:
   - https://github.com/Jenovic-th/monopoly-chonburi-game
 - To see the newest commit on another computer after pulling:
   - `git log -1 --oneline`
+
+### Added after Demo 0.3
+
+- Added Chonburi Prison tile `20` behavior:
+  - landing on tile `20` now gives a Prison Contact Coupon instead of sending the player to jail,
+  - the coupon gives 5% off the next Local Power Broker influence card purchase,
+  - coupons do not stack and are consumed when used,
+  - the coupon is shown in the player Influence summary and Influence detail popup.
+- Refined the right-side player panel:
+  - the panel now matches the board height on desktop,
+  - desktop layout now uses more horizontal space and widens the player panel,
+  - player holdings are shown as compact card shelves,
+  - sections are split into Property Cards, Influence Cards, and Prison Cards,
+  - Influence Cards and Prison Cards now share one lower row:
+    - three fixed influence slots on the left,
+    - one prison/coupon card on the right,
+  - clicking a compact card opens a full detail modal for that exact card.
+- Shortened board land labels to compact values such as `850K` and `1.1M` so tile names have more room.
+- Added a Net Worth ranking popup:
+  - opens from the center console,
+  - ranks all players by cash, business investment value, land value, and held influence card value,
+  - shows income per round for balance checking.
+- Raised the center console click layer so console buttons do not accidentally click board tiles underneath.
+- Normalized board grid cells to an equal `11 x 11` layout so side tiles and top/bottom tiles use the same size.
+- Added future prison-state scaffolding:
+  - prison skipped-turn tracking exists for later influence-card risk rules,
+  - Prison Jackpot state exists for later Political Event lottery rewards.
 
 ### Added after Demo 0.2
 
@@ -120,6 +147,13 @@
   - percentage events are tracked per player and expire individually when that player next collects income at tile `00`,
   - player tabs now show any active next-income event for the selected player,
   - the board console now displays the current Prison Jackpot.
+- Added `20` Chonburi Prison v1:
+  - landing on tile `20` does not send that player to prison,
+  - landing on tile `20` gives a Prison Contact Coupon for 5% off the next influence card purchase,
+  - coupons do not stack; landing again while holding one keeps the existing coupon,
+  - the coupon is consumed when buying an influence card,
+  - prison skip tracking and Prison Jackpot contribution logic remain ready for future 20% jail-risk-on-use effects,
+  - player tabs show prison status and coupon status.
 - Added prototype test move controls:
   - the board console now has buttons `1-12` to move the human player by a chosen number of spaces,
   - the random `Roll Dice` button remains available,

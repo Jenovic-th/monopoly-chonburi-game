@@ -28,6 +28,7 @@ type Phase =
   | 'card-choice'
   | 'education-choice'
   | 'study-skip'
+  | 'prison-skip'
   | 'investment-choice'
   | 'investment-card-choice'
   | 'political-event'
@@ -46,7 +47,13 @@ type EducationState = {
 
 type BuraphaChoice = 'bachelor' | 'master' | 'alumni'
 
-type PlayerDetailModal = 'businesses' | 'land' | 'influence' | null
+type InventoryDetail =
+  | { kind: 'business'; id: string }
+  | { kind: 'land'; tileId: number }
+  | { kind: 'influence'; id: string }
+  | { kind: 'prisonCoupon' }
+  | { kind: 'prisonStatus' }
+  | null
 
 type InvestmentOffer = {
   playerIndex: number
@@ -143,8 +150,11 @@ const tileCount = 40
 const startingCash = 100000
 const passStartIncome = 20000
 const landRentRate = 0.03
+const prisonJackpotMinimum = 20000
+const prisonContactDiscountRate = 0.05
 const investmentBankTile = 0
 const politicalEventTile = 5
+const prisonTile = 20
 const buraphaTile = 10
 const localPowerBrokerTile = 30
 const walkDelayMs = 55
@@ -281,6 +291,19 @@ function formatMoney(amount: number) {
   return amount.toLocaleString()
 }
 
+function formatCompactMoney(amount: number) {
+  if (amount >= 1000000) {
+    const millions = amount / 1000000
+    return `${Number.isInteger(millions) ? millions.toFixed(0) : millions.toFixed(1)}M`
+  }
+
+  if (amount >= 1000) {
+    return `${Math.round(amount / 1000)}K`
+  }
+
+  return amount.toLocaleString()
+}
+
 function getRandomInfluenceOffer() {
   return [...influenceCards]
     .sort(() => Math.random() - 0.5)
@@ -327,13 +350,18 @@ function App() {
   const [selectedPoliticalEvent, setSelectedPoliticalEvent] = useState<PoliticalEventCard | null>(null)
   const [incomeModifiers, setIncomeModifiers] = useState<IncomeModifier[]>([])
   const [prisonJackpot, setPrisonJackpot] = useState(0)
+  const [isNetWorthOpen, setIsNetWorthOpen] = useState(false)
+  const [prisonTurns, setPrisonTurns] = useState<number[]>(() => players.map(() => 0))
+  const [prisonContactCoupons, setPrisonContactCoupons] = useState<boolean[]>(() =>
+    players.map(() => false),
+  )
   const [influenceOffer, setInfluenceOffer] = useState<InfluenceCard[]>([])
   const [influenceHoldings, setInfluenceHoldings] = useState<InfluenceHolding[]>([])
   const [cash, setCash] = useState<number[]>(() => players.map(() => startingCash))
   const [businesses, setBusinesses] = useState<BusinessHolding[]>([])
   const [landHoldings, setLandHoldings] = useState<LandHolding[]>([])
   const [selectedPlayerIndex, setSelectedPlayerIndex] = useState(0)
-  const [playerDetailModal, setPlayerDetailModal] = useState<PlayerDetailModal>(null)
+  const [inventoryDetail, setInventoryDetail] = useState<InventoryDetail>(null)
 
   const skipRequestedRef = useRef(false)
   const activeRunRef = useRef(false)
@@ -350,6 +378,8 @@ function App() {
   const landHoldingsRef = useRef<LandHolding[]>([])
   const incomeModifiersRef = useRef<IncomeModifier[]>([])
   const prisonJackpotRef = useRef(0)
+  const prisonTurnsRef = useRef<number[]>(players.map(() => 0))
+  const prisonContactCouponsRef = useRef<boolean[]>(players.map(() => false))
   const influenceHoldingsRef = useRef<InfluenceHolding[]>([])
   const influenceCardIdRef = useRef(0)
   const forcedMoveRef = useRef<number | null>(null)
@@ -421,6 +451,16 @@ function App() {
     setPrisonJackpot(nextPrisonJackpot)
   }
 
+  function updatePrisonTurns(nextPrisonTurns: number[]) {
+    prisonTurnsRef.current = nextPrisonTurns
+    setPrisonTurns(nextPrisonTurns)
+  }
+
+  function updatePrisonContactCoupons(nextPrisonContactCoupons: boolean[]) {
+    prisonContactCouponsRef.current = nextPrisonContactCoupons
+    setPrisonContactCoupons(nextPrisonContactCoupons)
+  }
+
   function updateInfluenceHoldings(nextInfluenceHoldings: InfluenceHolding[]) {
     influenceHoldingsRef.current = nextInfluenceHoldings
     setInfluenceHoldings(nextInfluenceHoldings)
@@ -445,6 +485,12 @@ function App() {
   function getBusinessHoldingIncome(business: BusinessHolding) {
     const multiplier = businessLevelMultipliers[business.level - 1] ?? businessLevelMultipliers[0]
     return Math.round(business.baseIncome * multiplier)
+  }
+
+  function getRawBusinessIncomeForPlayer(playerIndex: number) {
+    return businessesRef.current
+      .filter((business) => business.playerIndex === playerIndex)
+      .reduce((total, business) => total + getBusinessHoldingIncome(business), 0)
   }
 
   function isBusinessInScope(business: BusinessHolding, scope: PoliticalEventScope) {
@@ -548,6 +594,33 @@ function App() {
     }
   }
 
+  async function skipPrisonTurn(playerIndex: number, runId: number) {
+    const currentTurns = prisonTurnsRef.current[playerIndex]
+
+    if (currentTurns <= 0) {
+      return
+    }
+
+    const jackpotContribution = Math.max(
+      getRawBusinessIncomeForPlayer(playerIndex),
+      prisonJackpotMinimum,
+    )
+    const nextPrisonTurns = [...prisonTurnsRef.current]
+    nextPrisonTurns[playerIndex] = Math.max(currentTurns - 1, 0)
+    updatePrisonTurns(nextPrisonTurns)
+    updatePrisonJackpot(prisonJackpotRef.current + jackpotContribution)
+    setPhase('prison-skip')
+    setStatus(
+      `${players[playerIndex].name} is in Chonburi Prison. Skipped turn: ${nextPrisonTurns[playerIndex]} left. ${formatMoney(jackpotContribution)} moved into Prison Jackpot.`,
+    )
+
+    await wait(aiDelayMs)
+
+    if (runId !== runIdRef.current) {
+      return
+    }
+  }
+
   async function movePlayer(playerIndex: number, steps: number, runId: number) {
     skipRequestedRef.current = false
     setPhase('moving')
@@ -598,6 +671,11 @@ function App() {
     const player = players[playerIndex]
     setCurrentPlayerIndex(playerIndex)
 
+    if (prisonTurnsRef.current[playerIndex] > 0) {
+      await skipPrisonTurn(playerIndex, runId)
+      return
+    }
+
     if (player.role === 'Human' && educationRef.current.skipTurns > 0) {
       await skipStudyTurn(runId)
       return
@@ -634,6 +712,7 @@ function App() {
     ].slice(0, 5))
 
     const finalPosition = await movePlayer(playerIndex, roll.total, runId)
+
     const rentResult =
       typeof finalPosition === 'number' ? payLandRent(playerIndex, finalPosition) : null
     const rentMessage = rentResult
@@ -646,6 +725,15 @@ function App() {
           ? `${rentMessage} Rent due was ${formatMoney(rentResult.rentDue)}, but ${player.name} only had enough to pay ${formatMoney(rentResult.rentPaid)}.`
           : rentMessage,
       )
+    }
+
+    if (
+      runId === runIdRef.current &&
+      typeof finalPosition === 'number' &&
+      finalPosition === prisonTile
+    ) {
+      await handlePrisonBazaarTile(playerIndex, runId)
+      return
     }
 
     if (
@@ -744,6 +832,25 @@ function App() {
     investmentChoiceResolverRef.current = null
     setInvestmentOffer(null)
     setSelectedInvestmentTile(null)
+
+    if (runId !== runIdRef.current) {
+      return
+    }
+  }
+
+  async function handlePrisonBazaarTile(playerIndex: number, runId: number) {
+    const nextCoupons = [...prisonContactCouponsRef.current]
+    const alreadyHasCoupon = nextCoupons[playerIndex]
+    nextCoupons[playerIndex] = true
+    updatePrisonContactCoupons(nextCoupons)
+
+    setStatus(
+      alreadyHasCoupon
+        ? `${players[playerIndex].name} visited Chonburi Prison Bazaar and already has a Prison Contact Coupon.`
+        : `${players[playerIndex].name} received a Prison Contact Coupon: ${Math.round(prisonContactDiscountRate * 100)}% off the next influence card purchase.`,
+    )
+
+    await wait(aiDelayMs)
 
     if (runId !== runIdRef.current) {
       return
@@ -936,7 +1043,7 @@ function App() {
         await playTurn(playerIndex, runId)
       }
 
-      continueStudyRounds = educationRef.current.skipTurns > 0
+      continueStudyRounds = educationRef.current.skipTurns > 0 || prisonTurnsRef.current[0] > 0
     }
 
     if (runId !== runIdRef.current) {
@@ -966,6 +1073,7 @@ function App() {
       phase === 'card-choice' ||
       phase === 'education-choice' ||
       phase === 'study-skip' ||
+      phase === 'prison-skip' ||
       phase === 'investment-choice' ||
       phase === 'investment-card-choice' ||
       phase === 'political-event' ||
@@ -1168,18 +1276,28 @@ function App() {
       return
     }
 
+    const hasPrisonContactCoupon = prisonContactCouponsRef.current[playerIndex]
+    const discount = hasPrisonContactCoupon ? Math.round(card.price * prisonContactDiscountRate) : 0
+    const finalPrice = card.price - discount
     const playerCash = cashRef.current[playerIndex]
 
-    if (playerCash < card.price) {
+    if (playerCash < finalPrice) {
       resolveInfluenceChoice(
-        `${players[playerIndex].name} needs ${formatMoney(card.price)} but only has ${formatMoney(playerCash)}.`,
+        `${players[playerIndex].name} needs ${formatMoney(finalPrice)} but only has ${formatMoney(playerCash)}.`,
       )
       return
     }
 
     const nextCash = [...cashRef.current]
-    nextCash[playerIndex] -= card.price
+    nextCash[playerIndex] -= finalPrice
     updateCash(nextCash)
+
+    if (hasPrisonContactCoupon) {
+      const nextCoupons = [...prisonContactCouponsRef.current]
+      nextCoupons[playerIndex] = false
+      updatePrisonContactCoupons(nextCoupons)
+    }
+
     influenceCardIdRef.current += 1
     updateInfluenceHoldings([
       ...influenceHoldingsRef.current,
@@ -1188,13 +1306,13 @@ function App() {
         playerIndex,
         cardId: card.id,
         title: card.title,
-        pricePaid: card.price,
+        pricePaid: finalPrice,
         risk: card.risk,
         description: card.description,
       },
     ])
     resolveInfluenceChoice(
-      `${players[playerIndex].name} bought ${card.title} for ${formatMoney(card.price)}. It is now in their hand (${playerCards.length + 1}/${maxInfluenceCards}).`,
+      `${players[playerIndex].name} bought ${card.title} for ${formatMoney(finalPrice)}${discount > 0 ? ` after ${formatMoney(discount)} Prison Contact discount` : ''}. It is now in their hand (${playerCards.length + 1}/${maxInfluenceCards}).`,
     )
   }
 
@@ -1246,6 +1364,8 @@ function App() {
     updateLandHoldings([])
     updateIncomeModifiers([])
     updatePrisonJackpot(0)
+    updatePrisonTurns(players.map(() => 0))
+    updatePrisonContactCoupons(players.map(() => false))
     updateInfluenceHoldings([])
     setInvestmentOffer(null)
     setSelectedInvestmentTile(null)
@@ -1253,7 +1373,8 @@ function App() {
     setSelectedPoliticalEvent(null)
     setInfluenceOffer([])
     setCurrentPlayerIndex(0)
-    setPlayerDetailModal(null)
+    setInventoryDetail(null)
+    setIsNetWorthOpen(false)
     setPhase('ready')
     setLatestRoll(null)
     setStatus('Game reset. Roll to start the round.')
@@ -1271,17 +1392,19 @@ function App() {
             ? 'Choose Option'
             : phase === 'study-skip'
               ? 'Studying'
-              : phase === 'investment-choice'
-                ? 'Choose Investment'
-                : phase === 'investment-card-choice'
-                  ? 'Choose Plan'
-                  : phase === 'political-event'
-                    ? 'Event'
-                    : phase === 'land-choice'
-                      ? 'Buy Land'
-                      : phase === 'influence-choice'
-                        ? 'Choose Influence'
-                        : 'Skip Move'
+              : phase === 'prison-skip'
+                ? 'In Prison'
+                : phase === 'investment-choice'
+                  ? 'Choose Investment'
+                  : phase === 'investment-card-choice'
+                    ? 'Choose Plan'
+                    : phase === 'political-event'
+                      ? 'Event'
+                      : phase === 'land-choice'
+                        ? 'Buy Land'
+                        : phase === 'influence-choice'
+                          ? 'Choose Influence'
+                          : 'Skip Move'
   const activeTile = boardTiles[positions[currentPlayerIndex]]
   const selectedLandTileData = selectedLandTile === null ? null : boardTiles[selectedLandTile]
   const selectedLandHolding =
@@ -1304,6 +1427,39 @@ function App() {
             business.playerIndex === currentPlayerIndex &&
             business.tileId === selectedInvestmentTile,
         )
+  const netWorthRows = players
+    .map((player, playerIndex) => {
+      const playerBusinesses = businesses.filter(
+        (business) => business.playerIndex === playerIndex,
+      )
+      const businessValue = playerBusinesses.reduce(
+        (total, business) => total + business.pricePaid,
+        0,
+      )
+      const landValue = landHoldings
+        .filter((holding) => holding.playerIndex === playerIndex)
+        .reduce((total, holding) => total + holding.pricePaid, 0)
+      const influenceValue = influenceHoldings
+        .filter((holding) => holding.playerIndex === playerIndex)
+        .reduce((total, holding) => total + holding.pricePaid, 0)
+      const income = playerBusinesses.reduce(
+        (total, business) => total + getBusinessHoldingIncome(business),
+        0,
+      )
+      const total = cash[playerIndex] + businessValue + landValue + influenceValue
+
+      return {
+        player,
+        playerIndex,
+        cash: cash[playerIndex],
+        businessValue,
+        landValue,
+        influenceValue,
+        income,
+        total,
+      }
+    })
+    .sort((a, b) => b.total - a.total)
   const selectedPlayer = players[selectedPlayerIndex]
   const selectedPlayerBusinesses = businesses.filter(
     (business) => business.playerIndex === selectedPlayerIndex,
@@ -1321,10 +1477,25 @@ function App() {
     (total, business) => total + getBusinessHoldingIncome(business),
     0,
   )
-  const selectedPlayerLandValue = selectedPlayerLandHoldings.reduce(
-    (total, holding) => total + holding.pricePaid,
-    0,
-  )
+  const selectedPrisonStatus =
+    prisonTurns[selectedPlayerIndex] > 0
+      ? `In prison: ${prisonTurns[selectedPlayerIndex]} skipped turns left`
+      : 'Free'
+  const selectedPrisonCouponStatus = prisonContactCoupons[selectedPlayerIndex]
+    ? `${Math.round(prisonContactDiscountRate * 100)}% influence discount ready`
+    : 'No coupon'
+  const selectedInventoryBusiness =
+    inventoryDetail?.kind === 'business'
+      ? selectedPlayerBusinesses.find((business) => business.id === inventoryDetail.id)
+      : null
+  const selectedInventoryLand =
+    inventoryDetail?.kind === 'land'
+      ? selectedPlayerLandHoldings.find((holding) => holding.tileId === inventoryDetail.tileId)
+      : null
+  const selectedInventoryInfluence =
+    inventoryDetail?.kind === 'influence'
+      ? selectedPlayerInfluenceCards.find((card) => card.id === inventoryDetail.id)
+      : null
   const selectedEducationStatus =
     selectedPlayer.role === 'Human'
       ? education.activeStudy === 'bachelor'
@@ -1359,7 +1530,7 @@ function App() {
                 <span className="tile-number">{tile.toString().padStart(2, '0')}</span>
                 <span className="tile-name">{tileData.name}</span>
                 {tileData.landPrice && (
-                  <span className="land-price">Land {formatMoney(tileData.landPrice)}</span>
+                  <span className="land-price">{formatCompactMoney(tileData.landPrice)}</span>
                 )}
                 {landHolding && (
                   <span
@@ -1427,6 +1598,7 @@ function App() {
               phase === 'card-choice' ||
               phase === 'education-choice' ||
               phase === 'study-skip' ||
+              phase === 'prison-skip' ||
               phase === 'investment-choice' ||
               phase === 'investment-card-choice' ||
               phase === 'political-event' ||
@@ -1479,6 +1651,12 @@ function App() {
             <strong>{formatMoney(prisonJackpot)}</strong>
           </div>
 
+          <button className="net-worth-button" type="button" onClick={() => setIsNetWorthOpen(true)}>
+            <span>Net Worth</span>
+            <strong>{players[netWorthRows[0].playerIndex].name}</strong>
+            <em>{formatMoney(netWorthRows[0].total)}</em>
+          </button>
+
           <div className="compact-tile-summary" aria-label="Current tile summary">
             <span>{activeTile.id.toString().padStart(2, '0')}</span>
             <strong>{activeTile.name}</strong>
@@ -1494,7 +1672,10 @@ function App() {
                 aria-selected={selectedPlayerIndex === index}
                 className={selectedPlayerIndex === index ? 'active' : ''}
                 key={player.id}
-                onClick={() => setSelectedPlayerIndex(index)}
+                onClick={() => {
+                  setSelectedPlayerIndex(index)
+                  setInventoryDetail(null)
+                }}
                 role="tab"
                 type="button"
               >
@@ -1542,22 +1723,111 @@ function App() {
               )}
             </div>
 
-            <div className="ledger-actions">
-              <button type="button" onClick={() => setPlayerDetailModal('businesses')}>
-                <span>Businesses</span>
-                <strong>{selectedPlayerBusinesses.length}</strong>
-                <em>{formatMoney(selectedPlayerIncome)} / round</em>
-              </button>
-              <button type="button" onClick={() => setPlayerDetailModal('land')}>
-                <span>Land</span>
-                <strong>{selectedPlayerLandHoldings.length}</strong>
-                <em>{formatMoney(selectedPlayerLandValue)}</em>
-              </button>
-              <button type="button" onClick={() => setPlayerDetailModal('influence')}>
-                <span>Influence</span>
-                <strong>{selectedPlayerInfluenceCards.length}/{maxInfluenceCards}</strong>
-                <em>Cards held</em>
-              </button>
+            <div className="inventory-panel" aria-label={`${selectedPlayer.name} card inventory`}>
+              <section className="inventory-section">
+                <div className="inventory-heading">
+                  <span>Property Cards</span>
+                  <strong>{selectedPlayerBusinesses.length + selectedPlayerLandHoldings.length}</strong>
+                </div>
+                <div className="mini-card-list">
+                  {selectedPlayerBusinesses.map((business) => (
+                    <button
+                      className="mini-card business-mini-card"
+                      key={business.id}
+                      type="button"
+                      onClick={() => setInventoryDetail({ kind: 'business', id: business.id })}
+                    >
+                      <strong>{business.title}</strong>
+                      <span>
+                        {boardTiles[business.tileId].id.toString().padStart(2, '0')} | Lv.{business.level}
+                      </span>
+                      <em>{formatMoney(getBusinessHoldingIncome(business))} / round</em>
+                    </button>
+                  ))}
+                  {selectedPlayerLandHoldings.map((holding) => (
+                    <button
+                      className="mini-card land-mini-card"
+                      key={holding.tileId}
+                      type="button"
+                      onClick={() => setInventoryDetail({ kind: 'land', tileId: holding.tileId })}
+                    >
+                      <strong>{boardTiles[holding.tileId].name}</strong>
+                      <span>{boardTiles[holding.tileId].id.toString().padStart(2, '0')} | Land</span>
+                      <em>{formatMoney(holding.pricePaid)}</em>
+                    </button>
+                  ))}
+                  {selectedPlayerBusinesses.length === 0 && selectedPlayerLandHoldings.length === 0 && (
+                    <p className="inventory-empty">No property cards.</p>
+                  )}
+                </div>
+              </section>
+
+              <div className="lower-inventory-grid">
+                <section className="inventory-section">
+                  <div className="inventory-heading">
+                    <span>Influence Cards</span>
+                    <strong>{selectedPlayerInfluenceCards.length}/{maxInfluenceCards}</strong>
+                  </div>
+                  <div className="mini-card-list influence-slot-list">
+                    {selectedPlayerInfluenceCards.map((card) => (
+                      <button
+                        className="mini-card influence-mini-card"
+                        key={card.id}
+                        type="button"
+                        onClick={() => setInventoryDetail({ kind: 'influence', id: card.id })}
+                      >
+                        <strong>{card.title}</strong>
+                        <span>{card.risk}</span>
+                        <em>Paid {formatMoney(card.pricePaid)}</em>
+                      </button>
+                    ))}
+                    {Array.from({
+                      length: Math.max(maxInfluenceCards - selectedPlayerInfluenceCards.length, 0),
+                    }).map((_, index) => (
+                      <div className="mini-card empty-slot" key={`empty-influence-${index}`}>
+                        <strong>Empty slot</strong>
+                        <span>Influence card</span>
+                      </div>
+                    ))}
+                  </div>
+                </section>
+
+                <section className="inventory-section">
+                  <div className="inventory-heading">
+                    <span>Prison Cards</span>
+                    <strong>{prisonContactCoupons[selectedPlayerIndex] ? 1 : 0}</strong>
+                  </div>
+                  <div className="mini-card-list prison-slot-list">
+                    <button
+                      className={`mini-card ${
+                        prisonContactCoupons[selectedPlayerIndex]
+                          ? 'coupon-mini-card'
+                          : 'prison-mini-card'
+                      }`}
+                      type="button"
+                      onClick={() =>
+                        setInventoryDetail(
+                          prisonContactCoupons[selectedPlayerIndex]
+                            ? { kind: 'prisonCoupon' }
+                            : { kind: 'prisonStatus' },
+                        )
+                      }
+                    >
+                      <strong>
+                        {prisonContactCoupons[selectedPlayerIndex]
+                          ? 'Prison Coupon'
+                          : 'Prison Status'}
+                      </strong>
+                      <span>
+                        {prisonContactCoupons[selectedPlayerIndex]
+                          ? `${Math.round(prisonContactDiscountRate * 100)}% influence discount`
+                          : selectedPrisonStatus}
+                      </span>
+                      <em>Jackpot {formatMoney(prisonJackpot)}</em>
+                    </button>
+                  </div>
+                </section>
+              </div>
             </div>
           </div>
         </aside>
@@ -1730,7 +2000,10 @@ function App() {
                     const playerCardCount = influenceHoldings.filter(
                       (holding) => holding.playerIndex === currentPlayerIndex,
                     ).length
-                    const canAfford = cash[currentPlayerIndex] >= card.price
+                    const hasCoupon = prisonContactCoupons[currentPlayerIndex]
+                    const discount = hasCoupon ? Math.round(card.price * prisonContactDiscountRate) : 0
+                    const finalPrice = card.price - discount
+                    const canAfford = cash[currentPlayerIndex] >= finalPrice
                     const handFull = playerCardCount >= maxInfluenceCards
 
                     return (
@@ -1741,7 +2014,10 @@ function App() {
                         onClick={() => buyInfluenceCard(card)}
                       >
                         <strong>{card.title}</strong>
-                        <span>Price {formatMoney(card.price)}</span>
+                        <span>
+                          Price {formatMoney(finalPrice)}
+                          {discount > 0 ? ` (-${formatMoney(discount)})` : ''}
+                        </span>
                         <span>{card.risk}</span>
                         <p>{card.description}</p>
                         {!canAfford && <em>Not enough cash</em>}
@@ -1904,80 +2180,179 @@ function App() {
           </div>
         )}
 
-        {playerDetailModal && (
+        {inventoryDetail && (
           <div className="choice-modal-backdrop">
-            <div className="choice-modal player-detail-modal" role="dialog" aria-modal="true">
+            <div className="choice-modal inventory-detail-modal" role="dialog" aria-modal="true">
               <div className="detail-modal-header">
                 <div>
                   <span>{selectedPlayer.name}</span>
                   <strong>
-                    {playerDetailModal === 'businesses'
-                      ? 'Businesses'
-                      : playerDetailModal === 'land'
-                        ? 'Land Owned'
-                        : 'Influence Cards'}
+                    {inventoryDetail.kind === 'business'
+                      ? selectedInventoryBusiness?.title ?? 'Business Card'
+                      : inventoryDetail.kind === 'land'
+                        ? selectedInventoryLand
+                          ? boardTiles[selectedInventoryLand.tileId].name
+                          : 'Land Card'
+                        : inventoryDetail.kind === 'influence'
+                          ? selectedInventoryInfluence?.title ?? 'Influence Card'
+                          : inventoryDetail.kind === 'prisonCoupon'
+                            ? 'Prison Contact Coupon'
+                            : 'Prison Status'}
                   </strong>
                 </div>
-                <button type="button" onClick={() => setPlayerDetailModal(null)}>
+                <button type="button" onClick={() => setInventoryDetail(null)}>
                   Close
                 </button>
               </div>
 
-              {playerDetailModal === 'businesses' && (
-                selectedPlayerBusinesses.length === 0 ? (
-                  <p className="empty-detail">No businesses yet.</p>
-                ) : (
-                  <div className="detail-list">
-                    {selectedPlayerBusinesses.map((business) => (
-                      <div className="detail-row" key={business.id}>
-                        <strong>
-                          {boardTiles[business.tileId].id.toString().padStart(2, '0')} {business.title}
-                        </strong>
-                        <span>
-                          Lv.{business.level} | {boardTiles[business.tileId].name}
-                        </span>
-                        <span>Income {formatMoney(getBusinessHoldingIncome(business))} / round</span>
-                      </div>
-                    ))}
+              {inventoryDetail.kind === 'business' && selectedInventoryBusiness && (
+                <div className="detail-list">
+                  <div className="detail-row">
+                    <strong>
+                      {boardTiles[selectedInventoryBusiness.tileId].id.toString().padStart(2, '0')}{' '}
+                      {boardTiles[selectedInventoryBusiness.tileId].name}
+                    </strong>
+                    <span>Zone: {boardTiles[selectedInventoryBusiness.tileId].zone}</span>
+                    <span>Tier: {selectedInventoryBusiness.tier}</span>
                   </div>
-                )
+                  <div className="detail-row">
+                    <strong>Business Level</strong>
+                    <span>Current level: {selectedInventoryBusiness.level}/{maxBusinessLevel}</span>
+                    <span>
+                      Current income {formatMoney(getBusinessHoldingIncome(selectedInventoryBusiness))} / round
+                    </span>
+                    <span>Base income {formatMoney(selectedInventoryBusiness.baseIncome)} / round</span>
+                  </div>
+                  <div className="detail-row">
+                    <strong>Cost</strong>
+                    <span>Paid {formatMoney(selectedInventoryBusiness.pricePaid)}</span>
+                    <p>{boardTiles[selectedInventoryBusiness.tileId].description}</p>
+                  </div>
+                </div>
               )}
 
-              {playerDetailModal === 'land' && (
-                selectedPlayerLandHoldings.length === 0 ? (
-                  <p className="empty-detail">No land owned yet.</p>
-                ) : (
-                  <div className="detail-list">
-                    {selectedPlayerLandHoldings.map((holding) => (
-                      <div className="detail-row" key={holding.tileId}>
-                        <strong>
-                          {boardTiles[holding.tileId].id.toString().padStart(2, '0')}{' '}
-                          {boardTiles[holding.tileId].name}
-                        </strong>
-                        <span>{boardTiles[holding.tileId].zone}</span>
-                        <span>Bought for {formatMoney(holding.pricePaid)}</span>
-                      </div>
-                    ))}
+              {inventoryDetail.kind === 'land' && selectedInventoryLand && (
+                <div className="detail-list">
+                  <div className="detail-row">
+                    <strong>
+                      {boardTiles[selectedInventoryLand.tileId].id.toString().padStart(2, '0')}{' '}
+                      {boardTiles[selectedInventoryLand.tileId].name}
+                    </strong>
+                    <span>{boardTiles[selectedInventoryLand.tileId].zone}</span>
+                    <span>Bought for {formatMoney(selectedInventoryLand.pricePaid)}</span>
                   </div>
-                )
+                  <div className="detail-row">
+                    <strong>Land Rent</strong>
+                    <span>
+                      Current rule: {Math.round(landRentRate * 100)}% of land price when another player lands here
+                    </span>
+                    <span>
+                      Rent due: {formatMoney(Math.round(selectedInventoryLand.pricePaid * landRentRate))}
+                    </span>
+                    <p>{boardTiles[selectedInventoryLand.tileId].description}</p>
+                  </div>
+                </div>
               )}
 
-              {playerDetailModal === 'influence' && (
-                selectedPlayerInfluenceCards.length === 0 ? (
-                  <p className="empty-detail">No influence cards yet.</p>
-                ) : (
-                  <div className="detail-list">
-                    {selectedPlayerInfluenceCards.map((card) => (
-                      <div className="detail-row" key={card.id}>
-                        <strong>{card.title}</strong>
-                        <span>Paid {formatMoney(card.pricePaid)}</span>
-                        <span>{card.risk}</span>
-                        <p>{card.description}</p>
-                      </div>
-                    ))}
+              {inventoryDetail.kind === 'influence' && selectedInventoryInfluence && (
+                <div className="detail-list">
+                  <div className="detail-row">
+                    <strong>{selectedInventoryInfluence.title}</strong>
+                    <span>Paid {formatMoney(selectedInventoryInfluence.pricePaid)}</span>
+                    <span>{selectedInventoryInfluence.risk}</span>
+                    <p>{selectedInventoryInfluence.description}</p>
                   </div>
-                )
+                  <div className="detail-row">
+                    <strong>Status</strong>
+                    <span>Held in hand</span>
+                    <span>Use effect and jail-risk roll will be added later.</span>
+                  </div>
+                </div>
               )}
+
+              {inventoryDetail.kind === 'prisonCoupon' && (
+                <div className="detail-list">
+                  <div className="detail-row coupon-row">
+                    <strong>Prison Contact Coupon</strong>
+                    <span>
+                      {Math.round(prisonContactDiscountRate * 100)}% off your next influence card purchase
+                    </span>
+                    <span>Received from Chonburi Prison Bazaar</span>
+                    <p>The coupon is consumed automatically when this player buys an influence card.</p>
+                  </div>
+                </div>
+              )}
+
+              {inventoryDetail.kind === 'prisonStatus' && (
+                <div className="detail-list">
+                  <div className="detail-row">
+                    <strong>{selectedPrisonStatus}</strong>
+                    <span>{selectedPrisonCouponStatus}</span>
+                    <span>Prison Jackpot: {formatMoney(prisonJackpot)}</span>
+                    <p>
+                      Future influence-card risk can send players here. While in prison, skipped-turn income
+                      feeds the jackpot.
+                    </p>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {isNetWorthOpen && (
+          <div className="choice-modal-backdrop">
+            <div className="choice-modal net-worth-modal" role="dialog" aria-modal="true">
+              <div className="detail-modal-header">
+                <div>
+                  <span>Current Ranking</span>
+                  <strong>Net Worth</strong>
+                </div>
+                <button type="button" onClick={() => setIsNetWorthOpen(false)}>
+                  Close
+                </button>
+              </div>
+
+              <div className="net-worth-list">
+                {netWorthRows.map((row, index) => (
+                  <div className="net-worth-row" key={row.player.id}>
+                    <div className="rank-badge">{index + 1}</div>
+                    <div className="rank-player">
+                      <span className={`token ledger-token ${row.player.shape} ${row.player.colorClass}`} />
+                      <div>
+                        <strong>{row.player.name}</strong>
+                        <span>{row.player.role}</span>
+                      </div>
+                    </div>
+                    <div className="rank-total">
+                      <span>Total</span>
+                      <strong>{formatMoney(row.total)}</strong>
+                    </div>
+                    <dl className="rank-breakdown">
+                      <div>
+                        <dt>Cash</dt>
+                        <dd>{formatMoney(row.cash)}</dd>
+                      </div>
+                      <div>
+                        <dt>Business</dt>
+                        <dd>{formatMoney(row.businessValue)}</dd>
+                      </div>
+                      <div>
+                        <dt>Land</dt>
+                        <dd>{formatMoney(row.landValue)}</dd>
+                      </div>
+                      <div>
+                        <dt>Influence</dt>
+                        <dd>{formatMoney(row.influenceValue)}</dd>
+                      </div>
+                      <div>
+                        <dt>Income / round</dt>
+                        <dd>{formatMoney(row.income)}</dd>
+                      </div>
+                    </dl>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         )}
