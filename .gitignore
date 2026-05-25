@@ -9,7 +9,9 @@ pnpm-debug.log*
 lerna-debug.log*
 
 node_modules
+.cache
 dist
+dist-*
 dist-ssr
 *.local
 
