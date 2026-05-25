@@ -94,6 +94,12 @@ type IncomeModifier = {
   scope: PoliticalEventScope
 }
 
+type LeaseSharePayment = {
+  ownerIndex: number
+  tileId: number
+  amount: number
+}
+
 type BusinessHolding = {
   id: string
   playerIndex: number
@@ -150,6 +156,7 @@ const tileCount = 40
 const startingCash = 100000
 const passStartIncome = 20000
 const landRentRate = 0.03
+const openLeaseShareRate = 0.1
 const prisonJackpotMinimum = 20000
 const prisonContactDiscountRate = 0.05
 const investmentBankTile = 0
@@ -515,7 +522,7 @@ function App() {
       (modifier) => modifier.playerIndex === playerIndex,
     )
     const modifierSummary = new Set<string>()
-    const businessIncome = playerBusinesses.reduce((total, business) => {
+    const businessIncomes = playerBusinesses.map((business) => {
       const baseIncome = getBusinessHoldingIncome(business)
       const matchingModifiers = playerModifiers.filter((modifier) =>
         isBusinessInScope(business, modifier.scope),
@@ -528,14 +535,49 @@ function App() {
         baseIncome,
       )
 
-      return total + modifiedIncome
-    }, 0)
+      return {
+        business,
+        income: modifiedIncome,
+      }
+    })
 
     return {
-      businessIncome,
+      businessIncome: businessIncomes.reduce((total, item) => total + item.income, 0),
+      businessIncomes,
       modifierSummary: [...modifierSummary],
       usedModifierIds: playerModifiers.map((modifier) => modifier.id),
     }
+  }
+
+  function getLeaseSharePayments(
+    playerIndex: number,
+    businessIncomes: { business: BusinessHolding; income: number }[],
+    passCount: number,
+  ) {
+    return businessIncomes.reduce<LeaseSharePayment[]>((payments, item) => {
+      const landHolding = landHoldingsRef.current.find(
+        (holding) => holding.tileId === item.business.tileId,
+      )
+
+      if (!landHolding || landHolding.playerIndex === playerIndex) {
+        return payments
+      }
+
+      const amount = Math.round(item.income * passCount * openLeaseShareRate)
+
+      if (amount <= 0) {
+        return payments
+      }
+
+      return [
+        ...payments,
+        {
+          ownerIndex: landHolding.playerIndex,
+          tileId: item.business.tileId,
+          amount,
+        },
+      ]
+    }, [])
   }
 
   function payStartIncome(playerIndex: number, passCount: number) {
@@ -547,9 +589,18 @@ function App() {
     const baseRoundIncome = passStartIncome * passCount
     const businessIncome = modifiedIncome.businessIncome * passCount
     const educationBonus = Math.round(businessIncome * getEducationIncomeBonusRate(playerIndex))
-    const totalIncome = baseRoundIncome + businessIncome + educationBonus
+    const leaseShares = getLeaseSharePayments(
+      playerIndex,
+      modifiedIncome.businessIncomes,
+      passCount,
+    )
+    const totalLeaseShare = leaseShares.reduce((total, payment) => total + payment.amount, 0)
+    const totalIncome = baseRoundIncome + businessIncome + educationBonus - totalLeaseShare
     const nextCash = [...cashRef.current]
     nextCash[playerIndex] += totalIncome
+    leaseShares.forEach((payment) => {
+      nextCash[payment.ownerIndex] += payment.amount
+    })
     updateCash(nextCash)
 
     if (modifiedIncome.usedModifierIds.length > 0) {
@@ -565,6 +616,8 @@ function App() {
       businessIncome,
       educationBonus,
       modifierSummary: modifiedIncome.modifierSummary,
+      leaseShares,
+      totalLeaseShare,
       totalIncome,
       nextCash: nextCash[playerIndex],
     }
@@ -658,8 +711,12 @@ function App() {
     if (payout) {
       const eventText =
         payout.modifierSummary.length > 0 ? ` Event: ${payout.modifierSummary.join(', ')}.` : ''
+      const leaseText =
+        payout.totalLeaseShare > 0
+          ? ` Open Lease paid ${formatMoney(payout.totalLeaseShare)} to land owner${payout.leaseShares.length > 1 ? 's' : ''}.`
+          : ''
       setStatus(
-        `${players[playerIndex].name} passed Investment Bank and received ${formatMoney(payout.totalIncome)}.${eventText} Cash: ${formatMoney(payout.nextCash)}.`,
+        `${players[playerIndex].name} passed Investment Bank and received ${formatMoney(payout.totalIncome)}.${eventText}${leaseText} Cash: ${formatMoney(payout.nextCash)}.`,
       )
     } else {
       setStatus(`${players[playerIndex].name} stopped at ${boardTiles[finalPosition].name}.`)
@@ -2248,6 +2305,9 @@ function App() {
                     </span>
                     <span>
                       Rent due: {formatMoney(Math.round(selectedInventoryLand.pricePaid * landRentRate))}
+                    </span>
+                    <span>
+                      Open Lease: owner receives {Math.round(openLeaseShareRate * 100)}% of tenant business income when that tenant collects at tile 00
                     </span>
                     <p>{boardTiles[selectedInventoryLand.tileId].description}</p>
                   </div>
