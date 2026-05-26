@@ -1,5 +1,70 @@
 # DEVLOG
 
+## 2026-05-26
+
+### Latest handoff status
+
+- Current milestone: Demo 1 path, playable economy loop.
+- Active working folder:
+  - `E:\Codex GPT\Monopoly Game Clean`
+- Repository:
+  - https://github.com/Jenovic-th/monopoly-chonburi-game
+- Current target win condition:
+  - first player to reach `10,000,000` Net Worth wins Demo 1.
+
+### Added today
+
+- Replaced the unstable old working copy with a clean clone:
+  - old folder had mixed Windows/Codex file ownership and `.git` metadata permission issues,
+  - new clean folder can run `git pull origin main`, install, lint, build, and dev server normally.
+- Added tenant and Open Lease visibility:
+  - land detail now shows businesses on the tile,
+  - owner businesses and tenant businesses are separated,
+  - expected Open Lease income is shown,
+  - business detail shows the land owner and tenant/Open Lease status,
+  - land detail shows all businesses on the land and expected lease share.
+- Added `Land Policy` v1:
+  - every purchased land defaults to `Open Lease`,
+  - land owner can switch between `Open Lease` and `Owner Only`,
+  - `Owner Only` blocks other players from buying or upgrading businesses on that land,
+  - existing tenant businesses are not removed,
+  - Investment Bank business choices respect `Owner Only`.
+- Compact player ledger UI:
+  - cash, income, and education were moved into the player header,
+  - Property Cards are now compact card tiles,
+  - card details still open in the existing popup when clicked,
+  - this reduces vertical scrolling in the right-side player panel.
+- Added simple AI economic decisions:
+  - AI buys affordable businesses on normal tiles,
+  - AI upgrades existing businesses before buying a new one,
+  - AI keeps a `20,000` cash reserve for business decisions,
+  - AI buys unowned land when it can afford it while keeping a `50,000` cash reserve,
+  - AI sets land policy to `Owner Only` if it already owns a business on that land, otherwise `Open Lease`,
+  - AI respects other players' `Owner Only` land policy.
+- Added Demo 1 win condition:
+  - target is `10,000,000` Net Worth,
+  - Net Worth includes cash, business investment value, land value, and influence card value,
+  - winner is checked after each player finishes a turn,
+  - game stops when a player reaches target Net Worth,
+  - winner popup shows the winner, target, final Net Worth, and ranking,
+  - `New Game` resets from the winner popup.
+
+### Verified today
+
+- `npm.cmd run check:encoding` passed.
+- `npm.cmd run lint` passed.
+- `npm.cmd run build` passed.
+- Local app reloaded at:
+  - http://127.0.0.1:5173/
+- Browser console had no errors after reload checks.
+
+### Recommended next development step
+
+- Add real `30` Local Power Broker effects for 2-3 influence cards:
+  - this should be scoped and directly tied to existing land/business systems,
+  - avoid adding land trading/auction systems before Demo 1 is playable end-to-end.
+- Keep land trading for Demo 1.5 unless playtesting proves Demo 1 needs it.
+
 ## 2026-05-22
 
 ### Latest handoff status

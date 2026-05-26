@@ -169,6 +169,31 @@
 - [x] Add Investment Bank back navigation:
   - after opening a target tile's business cards, Back returns to the tile list without spending the Investment Bank opportunity
   - Skip investment still ends the opportunity
+- [x] Add tenant and Open Lease visibility:
+  - land detail shows businesses on that tile
+  - owner businesses and tenant businesses are separated
+  - expected Open Lease income is shown
+  - business detail shows land owner and tenant status
+- [x] Add Land Policy v1:
+  - purchased land defaults to `Open Lease`
+  - land owner can switch between `Open Lease` and `Owner Only`
+  - `Owner Only` blocks other players from buying or upgrading businesses there
+  - existing tenant businesses remain in place
+  - Investment Bank respects `Owner Only`
+- [x] Compact the player ledger UI:
+  - cash, income, and education are merged into the player header
+  - Property Cards display as compact tiles
+  - clicking a card still opens the detail popup
+- [x] Add simple AI economic decisions:
+  - AI buys affordable businesses
+  - AI upgrades existing businesses before buying new ones
+  - AI buys unowned land when it has enough cash
+  - AI sets simple land policies
+  - AI respects `Owner Only`
+- [x] Add Demo 1 win condition:
+  - target is `10,000,000` Net Worth
+  - winner is checked after each player turn
+  - winner popup shows ranking and can start a new game
 
 ## Next
 
@@ -182,13 +207,13 @@
 - [x] Pay investment income from stored investments.
 - [x] Add land ownership purchase flow.
 - [x] Add board ownership markers for land owners.
-- [ ] Decide land rent and eviction/seizure rules.
+- [ ] Decide eviction/seizure rules after more playtesting.
 - [x] Apply education income bonus when business income is paid.
-- [ ] Add game end tracking and Net Worth winner screen.
+- [x] Add game end tracking and Net Worth winner screen.
 - [ ] Refine responsive board/panel proportions after more playtesting.
 - [ ] Decide whether investment cards should vary by tile category or zone.
-- [ ] Decide if multiple players can invest on the same tile.
-- [ ] Decide what happens if a land owner buys a tile that already has investments.
+- [x] Decide if multiple players can invest on the same tile.
+- [x] Decide what happens if a land owner buys a tile that already has investments.
 - [ ] Decide what the 3 action cards should actually do.
 - [ ] Decide whether card choices should depend on tile category.
 - [ ] Decide whether AI should choose cards automatically.
@@ -196,7 +221,7 @@
 - [x] Add tile value and purchase price.
 - [x] Add ownership system for land.
 - [x] Add rent system.
-- [ ] Decide how land owners interact with small businesses on their land.
+- [x] Decide how land owners interact with small businesses on their land.
 - [x] Add behavior for special tiles:
   - Chonburi Prison
 - [x] Show Chonburi Prison coupon in the Influence player detail popup.
@@ -209,7 +234,10 @@
 - [x] Shorten board land price labels.
 - [x] Add Net Worth ranking popup for balance testing.
 - [ ] Add real Local Power Broker card effects, prices, card inventory, and 20% jail-risk roll.
-- [ ] Add simple AI economic decisions.
+- [ ] Add 2-3 real Local Power Broker effects for Demo 1.
+- [ ] Playtest and tune the `10,000,000` Net Worth target.
+- [ ] Decide whether dev cash/test move controls should be hidden behind a dev mode.
+- [x] Add simple AI economic decisions.
 - [ ] Update README with setup, dev, and project overview.
 
 ## Design Questions

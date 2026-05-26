@@ -1399,18 +1399,18 @@ button {
 .player-card {
   min-height: 0;
   display: grid;
-  grid-template-rows: auto auto auto auto minmax(0, 1fr);
+  grid-template-rows: auto auto minmax(0, 1fr);
   align-content: start;
-  gap: 10px;
+  gap: 8px;
   overflow: hidden;
 }
 
 .player-card-header {
   display: grid;
-  grid-template-columns: 34px 1fr;
+  grid-template-columns: 28px minmax(80px, 0.75fr) minmax(0, 1.6fr);
   align-items: center;
   gap: 8px;
-  padding: 10px;
+  padding: 8px;
   border: 1px solid rgba(30, 37, 43, 0.18);
   border-radius: 7px;
   background: rgba(255, 255, 255, 0.62);
@@ -1419,7 +1419,8 @@ button {
 
 .player-card-header span,
 .ledger-section > span,
-.ledger-stats span {
+.ledger-stats span,
+.player-quick-stats dt {
   color: #5b6870;
   font-size: 11px;
   font-weight: 900;
@@ -1429,8 +1430,45 @@ button {
 .player-card-header strong {
   display: block;
   color: #172027;
-  font-size: 22px;
+  font-size: 20px;
   line-height: 1.15;
+}
+
+.player-quick-stats {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+  margin: 0;
+}
+
+.player-quick-stats div {
+  min-width: 0;
+  display: grid;
+  gap: 1px;
+  padding: 5px 6px;
+  border: 1px solid rgba(30, 37, 43, 0.12);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.65);
+}
+
+.player-quick-stats .education-stat {
+  grid-column: 1 / -1;
+}
+
+.player-quick-stats dt,
+.player-quick-stats dd {
+  min-width: 0;
+  margin: 0;
+}
+
+.player-quick-stats dd {
+  color: #172027;
+  font-size: 14px;
+  font-weight: 900;
+  line-height: 1.1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .ledger-stats {
@@ -1520,6 +1558,30 @@ button {
   gap: 6px;
   overflow: auto;
   padding-right: 2px;
+}
+
+.property-card-grid {
+  grid-template-columns: repeat(auto-fill, minmax(108px, 1fr));
+  align-content: start;
+}
+
+.property-card-grid .mini-card {
+  min-height: 68px;
+  padding: 7px 8px;
+}
+
+.property-card-grid .mini-card strong {
+  display: -webkit-box;
+  font-size: 12px;
+  line-height: 1.12;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.property-card-grid .mini-card span,
+.property-card-grid .mini-card em {
+  font-size: 11px;
 }
 
 .influence-slot-list,
@@ -1680,6 +1742,41 @@ button {
   gap: 12px;
 }
 
+.winner-modal {
+  width: min(680px, calc(100vw - 32px));
+  display: grid;
+  gap: 12px;
+}
+
+.winner-summary {
+  display: grid;
+  grid-template-columns: auto repeat(2, minmax(0, 1fr));
+  align-items: center;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid rgba(30, 37, 43, 0.16);
+  border-radius: 7px;
+  background: rgba(255, 255, 255, 0.74);
+}
+
+.winner-summary div {
+  display: grid;
+  gap: 3px;
+}
+
+.winner-summary span {
+  color: #5b6870;
+  font-size: 11px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.winner-summary strong {
+  color: #172027;
+  font-size: clamp(18px, 2.3vmin, 25px);
+  line-height: 1.08;
+}
+
 .net-worth-list {
   display: grid;
   gap: 10px;
@@ -1776,6 +1873,10 @@ button {
   font-weight: 900;
   line-height: 1.1;
   overflow-wrap: anywhere;
+}
+
+.compact-rank-row {
+  grid-template-columns: auto minmax(120px, 1fr) auto;
 }
 
 .empty-detail {
