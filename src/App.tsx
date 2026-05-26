@@ -6,6 +6,7 @@ import {
   type BusinessCard,
 } from './businessData'
 import './App.css'
+import './tenantDetails.css'
 
 type Player = {
   id: string
@@ -1466,6 +1467,23 @@ function App() {
   const selectedLandTileData = selectedLandTile === null ? null : boardTiles[selectedLandTile]
   const selectedLandHolding =
     selectedLandTile === null ? undefined : landHoldingByTile[selectedLandTile]
+  const selectedLandBusinesses =
+    selectedLandTile === null ? [] : (businessesByTile[selectedLandTile] ?? [])
+  const selectedLandOwnerBusinesses = selectedLandHolding
+    ? selectedLandBusinesses.filter(
+        (business) => business.playerIndex === selectedLandHolding.playerIndex,
+      )
+    : []
+  const selectedLandTenantBusinesses = selectedLandHolding
+    ? selectedLandBusinesses.filter(
+        (business) => business.playerIndex !== selectedLandHolding.playerIndex,
+      )
+    : selectedLandBusinesses
+  const selectedLandLeaseIncome = selectedLandTenantBusinesses.reduce(
+    (total, business) =>
+      total + Math.round(getBusinessHoldingIncome(business) * openLeaseShareRate),
+    0,
+  )
   const businessCards = getBusinessCardsForTile(activeTile)
   const currentPlayerBusinessesOnActiveTile = businesses.filter(
     (business) =>
@@ -1553,6 +1571,32 @@ function App() {
     inventoryDetail?.kind === 'influence'
       ? selectedPlayerInfluenceCards.find((card) => card.id === inventoryDetail.id)
       : null
+  const selectedInventoryBusinessTile = selectedInventoryBusiness
+    ? boardTiles[selectedInventoryBusiness.tileId]
+    : null
+  const selectedInventoryBusinessLandHolding = selectedInventoryBusiness
+    ? landHoldingByTile[selectedInventoryBusiness.tileId]
+    : undefined
+  const selectedInventoryBusinessIsTenant =
+    Boolean(selectedInventoryBusiness && selectedInventoryBusinessLandHolding) &&
+    selectedInventoryBusinessLandHolding?.playerIndex !== selectedInventoryBusiness?.playerIndex
+  const selectedInventoryBusinessLeaseShare = selectedInventoryBusinessIsTenant && selectedInventoryBusiness
+    ? Math.round(getBusinessHoldingIncome(selectedInventoryBusiness) * openLeaseShareRate)
+    : 0
+  const selectedInventoryLandBusinesses = selectedInventoryLand
+    ? (businessesByTile[selectedInventoryLand.tileId] ?? [])
+    : []
+  const selectedInventoryLandOwnerBusinesses = selectedInventoryLandBusinesses.filter(
+    (business) => business.playerIndex === selectedPlayerIndex,
+  )
+  const selectedInventoryLandTenantBusinesses = selectedInventoryLandBusinesses.filter(
+    (business) => business.playerIndex !== selectedPlayerIndex,
+  )
+  const selectedInventoryLandLeaseIncome = selectedInventoryLandTenantBusinesses.reduce(
+    (total, business) =>
+      total + Math.round(getBusinessHoldingIncome(business) * openLeaseShareRate),
+    0,
+  )
   const selectedEducationStatus =
     selectedPlayer.role === 'Human'
       ? education.activeStudy === 'bachelor'
@@ -2142,6 +2186,44 @@ function App() {
                     <strong>{players[selectedLandHolding.playerIndex].name}</strong>
                   </div>
                 )}
+                <div className="land-business-summary">
+                  <div>
+                    <span>Businesses on this tile</span>
+                    <strong>{selectedLandBusinesses.length}</strong>
+                  </div>
+                  {selectedLandHolding && (
+                    <div>
+                      <span>Expected Open Lease</span>
+                      <strong>{formatMoney(selectedLandLeaseIncome)} / round</strong>
+                    </div>
+                  )}
+                </div>
+                {selectedLandOwnerBusinesses.length > 0 && (
+                  <div className="tenant-list">
+                    <strong>Owner Business</strong>
+                    {selectedLandOwnerBusinesses.map((business) => (
+                      <span key={business.id}>
+                        {business.title} | Lv.{business.level} |{' '}
+                        {formatMoney(getBusinessHoldingIncome(business))} / round
+                      </span>
+                    ))}
+                  </div>
+                )}
+                {selectedLandTenantBusinesses.length > 0 && (
+                  <div className="tenant-list">
+                    <strong>{selectedLandHolding ? 'Tenant Business' : 'Existing Business'}</strong>
+                    {selectedLandTenantBusinesses.map((business) => (
+                      <span key={business.id}>
+                        {players[business.playerIndex].name}: {business.title} | Lv.{business.level} |{' '}
+                        {formatMoney(getBusinessHoldingIncome(business))} / round
+                        {selectedLandHolding &&
+                          ` | Open Lease ${formatMoney(
+                            Math.round(getBusinessHoldingIncome(business) * openLeaseShareRate),
+                          )}`}
+                      </span>
+                    ))}
+                  </div>
+                )}
                 <div className="land-buy-actions">
                   <button
                     disabled={
@@ -2266,10 +2348,10 @@ function App() {
                 <div className="detail-list">
                   <div className="detail-row">
                     <strong>
-                      {boardTiles[selectedInventoryBusiness.tileId].id.toString().padStart(2, '0')}{' '}
-                      {boardTiles[selectedInventoryBusiness.tileId].name}
+                      {selectedInventoryBusinessTile?.id.toString().padStart(2, '0')}{' '}
+                      {selectedInventoryBusinessTile?.name}
                     </strong>
-                    <span>Zone: {boardTiles[selectedInventoryBusiness.tileId].zone}</span>
+                    <span>Zone: {selectedInventoryBusinessTile?.zone}</span>
                     <span>Tier: {selectedInventoryBusiness.tier}</span>
                   </div>
                   <div className="detail-row">
@@ -2283,7 +2365,28 @@ function App() {
                   <div className="detail-row">
                     <strong>Cost</strong>
                     <span>Paid {formatMoney(selectedInventoryBusiness.pricePaid)}</span>
-                    <p>{boardTiles[selectedInventoryBusiness.tileId].description}</p>
+                    <p>{selectedInventoryBusinessTile?.description}</p>
+                  </div>
+                  <div className="detail-row">
+                    <strong>Land Relation</strong>
+                    {selectedInventoryBusinessLandHolding ? (
+                      <>
+                        <span>
+                          Land owner:{' '}
+                          {players[selectedInventoryBusinessLandHolding.playerIndex].name}
+                        </span>
+                        {selectedInventoryBusinessIsTenant ? (
+                          <span>
+                            Tenant business: pays {formatMoney(selectedInventoryBusinessLeaseShare)} Open Lease
+                            when collecting income at tile 00
+                          </span>
+                        ) : (
+                          <span>Owner business: no Open Lease payment on this tile</span>
+                        )}
+                      </>
+                    ) : (
+                      <span>No land owner yet</span>
+                    )}
                   </div>
                 </div>
               )}
@@ -2310,6 +2413,34 @@ function App() {
                       Open Lease: owner receives {Math.round(openLeaseShareRate * 100)}% of tenant business income when that tenant collects at tile 00
                     </span>
                     <p>{boardTiles[selectedInventoryLand.tileId].description}</p>
+                  </div>
+                  <div className="detail-row">
+                    <strong>Businesses on Land</strong>
+                    <span>Owner businesses: {selectedInventoryLandOwnerBusinesses.length}</span>
+                    <span>Tenant businesses: {selectedInventoryLandTenantBusinesses.length}</span>
+                    <span>
+                      Expected Open Lease: {formatMoney(selectedInventoryLandLeaseIncome)} / round
+                    </span>
+                    {selectedInventoryLandBusinesses.length === 0 ? (
+                      <p>No business has been opened on this land yet.</p>
+                    ) : (
+                      <div className="tenant-list detail-tenant-list">
+                        {selectedInventoryLandBusinesses.map((business) => {
+                          const isTenant = business.playerIndex !== selectedPlayerIndex
+
+                          return (
+                            <span key={business.id}>
+                              {players[business.playerIndex].name}: {business.title} | Lv.{business.level} |{' '}
+                              {formatMoney(getBusinessHoldingIncome(business))} / round
+                              {isTenant &&
+                                ` | Open Lease ${formatMoney(
+                                  Math.round(getBusinessHoldingIncome(business) * openLeaseShareRate),
+                                )}`}
+                            </span>
+                          )
+                        })}
+                      </div>
+                    )}
                   </div>
                 </div>
               )}
