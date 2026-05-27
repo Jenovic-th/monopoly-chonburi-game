@@ -8,6 +8,10 @@
   overflow: hidden;
 }
 
+.game-shell.board-focus {
+  padding: 8px 18px;
+}
+
 .game-layout {
   width: min(100%, 1560px);
   min-width: 0;
@@ -18,6 +22,26 @@
   justify-content: center;
   justify-self: center;
   gap: 14px;
+}
+
+.game-layout.ledger-collapsed {
+  width: 100%;
+  grid-template-columns: minmax(0, 1fr);
+  place-items: center;
+}
+
+.ledger-toggle {
+  position: fixed;
+  top: 12px;
+  right: 18px;
+  z-index: 40;
+  min-height: 36px;
+  padding: 0 14px;
+  border: 1px solid rgba(24, 34, 42, 0.24);
+  background: rgba(255, 255, 255, 0.92);
+  color: #172027;
+  font-size: 13px;
+  box-shadow: 0 8px 22px rgba(23, 32, 38, 0.16);
 }
 
 .board {
@@ -32,6 +56,12 @@
   border: 3px solid #1e252b;
   background: #dfe8e5;
   box-shadow: 0 24px 70px rgba(23, 32, 38, 0.22);
+}
+
+.ledger-collapsed .board {
+  width: min(calc(100vw - 36px), calc((100svh - 16px) * 1.6));
+  height: auto;
+  aspect-ratio: 16 / 10;
 }
 
 .tile {
@@ -323,6 +353,10 @@
   overflow: hidden;
 }
 
+.player-ledger.is-hidden {
+  display: none;
+}
+
 .eyebrow {
   margin: 0 0 6px;
   color: #4d5961;
@@ -426,6 +460,17 @@ button {
   background: transparent;
   color: #24303a;
   border: 1px solid rgba(29, 39, 46, 0.35);
+}
+
+.console-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.dev-tools {
+  display: grid;
+  gap: 8px;
 }
 
 .test-move-panel,
@@ -1399,18 +1444,18 @@ button {
 .player-card {
   min-height: 0;
   display: grid;
-  grid-template-rows: auto auto minmax(0, 1fr);
+  grid-template-rows: auto auto auto auto minmax(0, 1fr);
   align-content: start;
-  gap: 8px;
+  gap: 10px;
   overflow: hidden;
 }
 
 .player-card-header {
   display: grid;
-  grid-template-columns: 28px minmax(80px, 0.75fr) minmax(0, 1.6fr);
+  grid-template-columns: 34px 1fr;
   align-items: center;
   gap: 8px;
-  padding: 8px;
+  padding: 10px;
   border: 1px solid rgba(30, 37, 43, 0.18);
   border-radius: 7px;
   background: rgba(255, 255, 255, 0.62);
@@ -1419,8 +1464,7 @@ button {
 
 .player-card-header span,
 .ledger-section > span,
-.ledger-stats span,
-.player-quick-stats dt {
+.ledger-stats span {
   color: #5b6870;
   font-size: 11px;
   font-weight: 900;
@@ -1430,45 +1474,8 @@ button {
 .player-card-header strong {
   display: block;
   color: #172027;
-  font-size: 20px;
+  font-size: 22px;
   line-height: 1.15;
-}
-
-.player-quick-stats {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 6px;
-  margin: 0;
-}
-
-.player-quick-stats div {
-  min-width: 0;
-  display: grid;
-  gap: 1px;
-  padding: 5px 6px;
-  border: 1px solid rgba(30, 37, 43, 0.12);
-  border-radius: 6px;
-  background: rgba(255, 255, 255, 0.65);
-}
-
-.player-quick-stats .education-stat {
-  grid-column: 1 / -1;
-}
-
-.player-quick-stats dt,
-.player-quick-stats dd {
-  min-width: 0;
-  margin: 0;
-}
-
-.player-quick-stats dd {
-  color: #172027;
-  font-size: 14px;
-  font-weight: 900;
-  line-height: 1.1;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 .ledger-stats {
@@ -1502,6 +1509,36 @@ button {
   color: #46545d;
   font-size: 12px;
   line-height: 1.25;
+}
+
+.income-breakdown {
+  grid-template-columns: 1fr auto;
+  align-items: center;
+}
+
+.income-breakdown > span,
+.income-breakdown > strong {
+  grid-column: 1 / -1;
+}
+
+.income-breakdown div {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 8px;
+  color: #46545d;
+  font-size: 12px;
+  line-height: 1.2;
+}
+
+.income-breakdown div span {
+  font-weight: 800;
+}
+
+.income-breakdown div em {
+  color: #172027;
+  font-style: normal;
+  font-weight: 900;
+  text-align: right;
 }
 
 .inventory-panel {
@@ -1558,30 +1595,6 @@ button {
   gap: 6px;
   overflow: auto;
   padding-right: 2px;
-}
-
-.property-card-grid {
-  grid-template-columns: repeat(auto-fill, minmax(108px, 1fr));
-  align-content: start;
-}
-
-.property-card-grid .mini-card {
-  min-height: 68px;
-  padding: 7px 8px;
-}
-
-.property-card-grid .mini-card strong {
-  display: -webkit-box;
-  font-size: 12px;
-  line-height: 1.12;
-  overflow: hidden;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
-}
-
-.property-card-grid .mini-card span,
-.property-card-grid .mini-card em {
-  font-size: 11px;
 }
 
 .influence-slot-list,
@@ -1736,45 +1749,63 @@ button {
   line-height: 1.12;
 }
 
+.detail-action-button {
+  min-height: 38px;
+  justify-self: start;
+  padding: 0 14px;
+  border: 2px solid #172027;
+  border-radius: 6px;
+  background: #172027;
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.detail-action-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.48;
+}
+
+.eviction-modal {
+  width: min(720px, calc(100vw - 32px));
+  display: grid;
+  gap: 12px;
+}
+
+.eviction-target-list {
+  display: grid;
+  gap: 8px;
+}
+
+.eviction-target-card {
+  min-height: 76px;
+  display: grid;
+  gap: 5px;
+  padding: 12px;
+  border: 2px solid #50251f;
+  border-radius: 7px;
+  background: #fff7f3;
+  color: #2d1815;
+  box-shadow: 0 3px 0 #50251f;
+  text-align: left;
+}
+
+.eviction-target-card strong {
+  font-size: 16px;
+  line-height: 1.1;
+}
+
+.eviction-target-card span {
+  color: #5b3933;
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1.2;
+}
+
 .net-worth-modal {
   width: min(760px, calc(100vw - 32px));
   display: grid;
   gap: 12px;
-}
-
-.winner-modal {
-  width: min(680px, calc(100vw - 32px));
-  display: grid;
-  gap: 12px;
-}
-
-.winner-summary {
-  display: grid;
-  grid-template-columns: auto repeat(2, minmax(0, 1fr));
-  align-items: center;
-  gap: 10px;
-  padding: 12px;
-  border: 1px solid rgba(30, 37, 43, 0.16);
-  border-radius: 7px;
-  background: rgba(255, 255, 255, 0.74);
-}
-
-.winner-summary div {
-  display: grid;
-  gap: 3px;
-}
-
-.winner-summary span {
-  color: #5b6870;
-  font-size: 11px;
-  font-weight: 900;
-  text-transform: uppercase;
-}
-
-.winner-summary strong {
-  color: #172027;
-  font-size: clamp(18px, 2.3vmin, 25px);
-  line-height: 1.08;
 }
 
 .net-worth-list {
@@ -1875,10 +1906,6 @@ button {
   overflow-wrap: anywhere;
 }
 
-.compact-rank-row {
-  grid-template-columns: auto minmax(120px, 1fr) auto;
-}
-
 .empty-detail {
   margin: 0;
   padding: 12px;
@@ -1896,14 +1923,28 @@ button {
     overflow: auto;
   }
 
+  .game-shell.board-focus {
+    padding: 8px;
+  }
+
   .game-layout {
     grid-template-columns: 1fr;
     align-content: start;
   }
 
+  .game-layout.ledger-collapsed {
+    place-items: center;
+  }
+
   .board {
     width: calc(100vw - 24px);
     height: calc(100vw - 24px);
+  }
+
+  .ledger-collapsed .board {
+    width: min(calc(100vw - 16px), calc((100svh - 16px) * 0.625));
+    height: auto;
+    aspect-ratio: 10 / 16;
   }
 
   .turn-console {

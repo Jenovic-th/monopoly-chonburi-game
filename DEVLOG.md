@@ -1,69 +1,89 @@
 # DEVLOG
 
-## 2026-05-26
+## 2026-05-27
 
-### Latest handoff status
+### Access repair
 
-- Current milestone: Demo 1 path, playable economy loop.
-- Active working folder:
-  - `E:\Codex GPT\Monopoly Game Clean`
-- Repository:
-  - https://github.com/Jenovic-th/monopoly-chonburi-game
-- Current target win condition:
-  - first player to reach `10,000,000` Net Worth wins Demo 1.
+- Fixed Windows access problems on these existing files by recreating them with identical content:
+  - `DEVLOG.md`
+  - `TODO.md`
+  - `src/App.css`
+- Cause observed in this session:
+  - those files could be renamed and copied,
+  - but opening them for `ReadWrite` failed with `Access denied`,
+  - `src/App.tsx` was writable and had a different owner,
+  - recreating the affected files restored normal write access.
+- Removed temporary `.access-bak` files after the repair.
+- Avoided keeping workaround handoff/CSS files so project notes stay centralized.
 
-### Added today
+### Added
 
-- Replaced the unstable old working copy with a clean clone:
-  - old folder had mixed Windows/Codex file ownership and `.git` metadata permission issues,
-  - new clean folder can run `git pull origin main`, install, lint, build, and dev server normally.
-- Added tenant and Open Lease visibility:
-  - land detail now shows businesses on the tile,
-  - owner businesses and tenant businesses are separated,
-  - expected Open Lease income is shown,
-  - business detail shows the land owner and tenant/Open Lease status,
-  - land detail shows all businesses on the land and expected lease share.
-- Added `Land Policy` v1:
-  - every purchased land defaults to `Open Lease`,
-  - land owner can switch between `Open Lease` and `Owner Only`,
-  - `Owner Only` blocks other players from buying or upgrading businesses on that land,
-  - existing tenant businesses are not removed,
-  - Investment Bank business choices respect `Owner Only`.
-- Compact player ledger UI:
-  - cash, income, and education were moved into the player header,
-  - Property Cards are now compact card tiles,
-  - card details still open in the existing popup when clicked,
-  - this reduces vertical scrolling in the right-side player panel.
-- Added simple AI economic decisions:
-  - AI buys affordable businesses on normal tiles,
-  - AI upgrades existing businesses before buying a new one,
-  - AI keeps a `20,000` cash reserve for business decisions,
-  - AI buys unowned land when it can afford it while keeping a `50,000` cash reserve,
-  - AI sets land policy to `Owner Only` if it already owns a business on that land, otherwise `Open Lease`,
-  - AI respects other players' `Owner Only` land policy.
-- Added Demo 1 win condition:
-  - target is `10,000,000` Net Worth,
-  - Net Worth includes cash, business investment value, land value, and influence card value,
-  - winner is checked after each player finishes a turn,
-  - game stops when a player reaches target Net Worth,
-  - winner popup shows the winner, target, final Net Worth, and ranking,
-  - `New Game` resets from the winner popup.
+- Added Local Power Broker card effects v1:
+  - `Influence Eviction` can be used by the human player while the board is ready,
+  - eviction opens a target modal and removes one rival business anywhere on the board,
+  - the evicted business owner recovers 50% of that business' paid investment,
+  - `Lease Pressure` doubles the user's next Open Lease collection from 10% to 20%,
+  - Lease Pressure clears after that player actually receives an Open Lease payment,
+  - `Port Connection` gives the user 140% industrial/port business income on the next tile `00` income collection.
+- Added influence card jail-risk v1:
+  - every influence card use now rolls a 20% jail risk,
+  - if triggered, the user is moved to tile `20` Chonburi Prison,
+  - the user then skips 2 future turns,
+  - existing prison skip and Prison Jackpot contribution logic handles the skipped turns.
+- Added Burapha University tuition:
+  - bachelor study now costs `250,000`,
+  - master degree now costs `750,000`,
+  - the tuition is paid immediately when choosing to study,
+  - study buttons are disabled when the player does not have enough cash,
+  - education bonuses still apply only when business income is paid at tile `00`.
+- Fixed Burapha University affordability guard:
+  - the education modal now stores the player index that actually landed on tile `10`,
+  - tuition display, disabled state, and payment guard all read from that same player,
+  - this prevents studying when the active cash for that player is below tuition.
+- Added player income preview:
+  - the player panel now separates raw business income from estimated tile `00` income,
+  - the estimate shows base income, business income after active modifiers, education bonus, and Open Lease paid,
+  - this makes bachelor/master education bonuses visible before the next income collection.
+- Added Dev Mode toggle:
+  - test movement buttons and prototype cash tools are hidden by default,
+  - `Dev Mode` reveals those tools for balancing and debugging,
+  - reset turns Dev Mode off again so normal play starts clean.
+- Added board focus layout toggle:
+  - `Hide Info` hides the right-side player ledger,
+  - the board then changes from a square layout into a wide 16:10 rectangle on desktop,
+  - portrait/mobile focus view uses a tall 10:16 rectangle,
+  - this keeps the existing 40-tile numbering and special corner tiles intact,
+  - `Show Info` restores the player ledger without resetting game state,
+  - gameplay logic, dice, cards, AI turns, and money rules were not changed.
 
-### Verified today
+### Board center note
+
+- The center console still needs a dedicated layout pass before image-heavy tiles are added.
+- Recommended future direction:
+  - keep the center console as a compact fixed rectangle inside the empty board center,
+  - cap status text to a predictable area,
+  - make controls use a small grid instead of expanding vertically,
+  - avoid putting image assets in the center console; reserve images for board tiles/card popups.
+- Updated influence card inventory behavior:
+  - bought influence cards now store their actual effect type,
+  - human-held influence cards show a `Use Card` action in the card detail popup,
+  - AI influence card use remains manual/disabled for Demo 1.
+- Improved board business markers:
+  - markers now group by player per tile,
+  - multiple businesses owned by the same player on one tile no longer flood the board with separate markers,
+  - marker tooltip still lists the businesses and levels.
+
+### Still deferred
+
+- AI does not choose or use influence cards yet.
+- Full land trading, auction, and negotiation systems remain Demo 1.5+ work.
+
+### Verified
 
 - `npm.cmd run check:encoding` passed.
 - `npm.cmd run lint` passed.
 - `npm.cmd run build` passed.
-- Local app reloaded at:
-  - http://127.0.0.1:5173/
-- Browser console had no errors after reload checks.
-
-### Recommended next development step
-
-- Add real `30` Local Power Broker effects for 2-3 influence cards:
-  - this should be scoped and directly tied to existing land/business systems,
-  - avoid adding land trading/auction systems before Demo 1 is playable end-to-end.
-- Keep land trading for Demo 1.5 unless playtesting proves Demo 1 needs it.
+- Local dev server responded at `http://127.0.0.1:5173/`.
 
 ## 2026-05-22
 
