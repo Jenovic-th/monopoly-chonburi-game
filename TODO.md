@@ -114,7 +114,7 @@
 - [x] Exclude special tiles from Investment Bank investment choices.
 - [x] Add placeholder investment target selection UI.
 - [x] Add placeholder 3-plan investment cards after choosing an investment target.
-- [x] Keep AI Investment Bank behavior as status-only for now.
+- [x] Let AI use Investment Bank choices automatically.
 - [x] Add Local Power Broker concept UI:
   - landing on tile `30` shows 2 random influence card offers
   - player can choose 1 card or walk away
@@ -174,6 +174,9 @@
 - [x] Add Investment Bank back navigation:
   - after opening a target tile's business cards, Back returns to the tile list without spending the Investment Bank opportunity
   - Skip investment still ends the opportunity
+- [x] Make Investment Bank popup movable:
+  - drag handle lets the player move the popup away from board tiles
+  - position resets when a new Investment Bank choice starts
 
 ## Next
 
@@ -182,6 +185,10 @@
 - [x] Deduct placeholder investment costs from player cash.
 - [x] Store selected investments per player and per tile.
 - [x] Convert business card choices into real purchases.
+- [x] Enforce business stall ownership:
+  - each tile/card stall can have only one owner
+  - rival-owned stalls are unavailable to buy
+  - only the current owner can upgrade the stall
 - [x] Add business upgrade levels 1-3 when returning to the same tile.
 - [x] Decide when investment income is paid.
 - [x] Pay investment income from stored investments.
@@ -189,14 +196,17 @@
 - [x] Add board ownership markers for land owners.
 - [ ] Decide land rent and eviction/seizure rules.
 - [x] Apply education income bonus when business income is paid.
-- [ ] Add game end tracking and Net Worth winner screen.
+- [x] Add game end tracking and Net Worth winner screen:
+  - target net worth `10,000,000`
+  - show winner popup and ranking
+  - allow continuing for balance testing or resetting the game
 - [ ] Refine responsive board/panel proportions after more playtesting.
 - [ ] Decide whether investment cards should vary by tile category or zone.
 - [ ] Decide if multiple players can invest on the same tile.
 - [ ] Decide what happens if a land owner buys a tile that already has investments.
 - [ ] Decide what the 3 action cards should actually do.
 - [ ] Decide whether card choices should depend on tile category.
-- [ ] Decide whether AI should choose cards automatically.
+- [x] Let AI choose business cards automatically on normal tiles.
 - [ ] Add real card result display after selecting a card.
 - [x] Add tile value and purchase price.
 - [x] Add ownership system for land.
@@ -223,7 +233,18 @@
   - use a 16:10 rectangle on desktop and a 10:16 rectangle on portrait/mobile
   - keep current 40-tile numbering and special tiles unchanged
 - [ ] Redesign the center board console as a fixed compact panel that cannot overflow the board.
-- [ ] Add simple AI economic decisions.
+- [x] Add simple AI economic decisions:
+  - buy or upgrade businesses on normal tiles
+  - use Investment Bank tile `00`
+  - rank choices by income gain per price
+  - keep a cash reserve before buying
+- [x] Add AI land buyout decisions:
+  - buy unowned normal-tile land only
+  - keep a larger land-buy cash reserve
+  - require stable business income before buying land
+  - try buying/upgrading businesses before land buyout
+  - value land by landing rent, existing own business, and tenant business Open Lease
+- [ ] Add AI land buyout balance tuning after playtesting.
 - [ ] Update README with setup, dev, and project overview.
 
 ## Design Questions

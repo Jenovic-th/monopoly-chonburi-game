@@ -1,5 +1,41 @@
 # DEVLOG
 
+## 2026-05-28
+
+### Added
+
+- Added AI economic decisions v1:
+  - AI players now buy or upgrade business cards when they land on normal tiles,
+  - AI players now use Investment Bank tile `00` to choose an unlocked normal tile and invest there,
+  - AI choices are ranked by income gain per price paid,
+  - AI keeps a cash reserve before buying so it does not spend itself down to zero,
+  - AI now considers buying unowned land on normal tiles only after it first tries to buy or upgrade a business,
+  - AI land buyout requires stable cashflow before it is considered,
+  - AI land buyout keeps a much larger cash reserve than business purchases,
+  - AI values land higher when it already has a business there, when rival tenant businesses are present, or when landing rent value is strong,
+  - AI still skips Burapha education and Local Power Broker influence cards for now.
+- Added Demo 1 winner check:
+  - target net worth is `10,000,000`,
+  - net worth includes cash, paid business value, paid land value, and paid influence card value,
+  - winner popup shows the winner and current ranking,
+  - player can continue testing balance or reset the game.
+- Fixed business stall ownership:
+  - each tile has only one owner per business card/stall slot,
+  - other players can no longer buy the same stall slot after it is owned,
+  - only the stall owner can upgrade that stall,
+  - card choice UI now shows the rival owner and disables unavailable stalls,
+  - AI skips rival-owned stall slots when choosing business cards.
+- Improved Investment Bank popup usability:
+  - investment choice and investment card popups now have a drag handle,
+  - the popup can be moved out of the way to inspect board tiles,
+  - the popup returns to the center each time a new Investment Bank choice starts.
+
+### Verified
+
+- `npm.cmd run check:encoding` passed.
+- `npm.cmd run lint` passed.
+- `npm.cmd run build` passed.
+
 ## 2026-05-27
 
 ### Access repair

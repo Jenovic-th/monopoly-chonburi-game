@@ -658,6 +658,44 @@ button {
   box-shadow: 0 18px 52px rgba(12, 18, 23, 0.32);
 }
 
+.draggable-choice-modal {
+  will-change: transform;
+}
+
+.modal-drag-handle {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  gap: 8px;
+  margin: -4px -4px 12px;
+  padding: 9px 10px;
+  border: 1px solid rgba(32, 40, 46, 0.22);
+  border-radius: 7px;
+  background: #eaf6ff;
+  color: #172027;
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+}
+
+.modal-drag-handle:active {
+  cursor: grabbing;
+}
+
+.modal-drag-handle span {
+  color: #31576f;
+  font-size: 11px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.modal-drag-handle strong {
+  min-width: 0;
+  color: #172027;
+  font-size: 13px;
+  line-height: 1.1;
+}
+
 .card-choice {
   display: grid;
   gap: 8px;
@@ -1258,6 +1296,42 @@ button {
   line-height: 1.05;
 }
 
+.land-rule-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.land-rule-grid div {
+  display: grid;
+  gap: 4px;
+  padding: 10px;
+  border: 1px solid rgba(24, 35, 43, 0.18);
+  border-radius: 7px;
+  background: rgba(255, 255, 255, 0.74);
+}
+
+.land-rule-grid span {
+  color: #5b6870;
+  font-size: 11px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.land-rule-grid strong {
+  color: #152029;
+  font-size: clamp(14px, 1.75vmin, 18px);
+  line-height: 1.12;
+}
+
+.land-rule-grid p {
+  margin: 0;
+  color: #4c5a63;
+  font-size: clamp(11px, 1.3vmin, 13px);
+  font-weight: 700;
+  line-height: 1.25;
+}
+
 .land-buy-actions {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -1338,10 +1412,26 @@ button {
   font-size: clamp(13px, 1.55vmin, 16px);
 }
 
+.education-actions button:disabled {
+  cursor: not-allowed;
+  opacity: 0.48;
+}
+
 .education-actions .education-skip {
   background: transparent;
   color: #34285f;
   border: 1px dashed rgba(62, 47, 119, 0.48);
+}
+
+.education-warning {
+  padding: 10px 12px;
+  border: 2px solid #9b2f24;
+  border-radius: 7px;
+  background: #fff0eb;
+  color: #5f1f18;
+  font-size: clamp(13px, 1.55vmin, 16px);
+  font-weight: 900;
+  line-height: 1.25;
 }
 
 .tile-detail {
@@ -1567,6 +1657,10 @@ button {
   background: rgba(255, 255, 255, 0.46);
 }
 
+.property-inventory-section {
+  min-height: 0;
+}
+
 .inventory-heading {
   display: flex;
   align-items: center;
@@ -1595,6 +1689,11 @@ button {
   gap: 6px;
   overflow: auto;
   padding-right: 2px;
+}
+
+.property-card-list {
+  grid-template-columns: repeat(auto-fill, minmax(116px, 1fr));
+  gap: 7px;
 }
 
 .influence-slot-list,
@@ -1637,6 +1736,32 @@ button {
   background: rgba(255, 255, 255, 0.76);
   color: #172027;
   text-align: left;
+}
+
+.property-card-list .mini-card {
+  min-height: 82px;
+  grid-template-rows: auto auto 1fr;
+  align-content: start;
+  padding: 8px;
+}
+
+.property-card-list .mini-card strong,
+.property-card-list .mini-card span,
+.property-card-list .mini-card em {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.property-card-list .mini-card strong {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.property-card-list .mini-card span,
+.property-card-list .mini-card em {
+  white-space: nowrap;
 }
 
 .mini-card:hover {
@@ -1806,6 +1931,54 @@ button {
   width: min(760px, calc(100vw - 32px));
   display: grid;
   gap: 12px;
+}
+
+.winner-modal {
+  width: min(760px, calc(100vw - 32px));
+  display: grid;
+  gap: 12px;
+}
+
+.winner-summary {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 8px 12px;
+  padding: 12px;
+  border: 2px solid #172027;
+  border-radius: 7px;
+  background: #fff7db;
+}
+
+.winner-summary span {
+  color: #5b6870;
+  font-size: 11px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.winner-summary strong {
+  color: #172027;
+  font-size: clamp(18px, 2.2vmin, 24px);
+  line-height: 1.05;
+  text-align: right;
+}
+
+.winner-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.winner-actions button {
+  background: #111820;
+  color: #ffffff;
+}
+
+.winner-actions .winner-reset {
+  background: transparent;
+  color: #18232b;
+  border: 1px dashed rgba(24, 35, 43, 0.45);
 }
 
 .net-worth-list {
@@ -1986,12 +2159,20 @@ button {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
+  .land-rule-grid {
+    grid-template-columns: 1fr;
+  }
+
   .player-card {
     overflow: visible;
   }
 
   .inventory-panel {
     grid-template-rows: none;
+  }
+
+  .property-card-list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .lower-inventory-grid {
