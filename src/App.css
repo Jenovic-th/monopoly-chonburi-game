@@ -1,3 +1,84 @@
+.language-shell {
+  min-height: 100svh;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background:
+    linear-gradient(135deg, rgba(28, 86, 121, 0.12), transparent 34%),
+    #eef1f3;
+}
+
+.language-card {
+  width: min(100%, 520px);
+  display: grid;
+  gap: 18px;
+  padding: 28px;
+  border: 2px solid #1e252b;
+  border-radius: 8px;
+  background: #ffffff;
+  box-shadow: 0 24px 70px rgba(23, 32, 38, 0.2);
+}
+
+.language-card p,
+.language-card h1,
+.language-card span {
+  margin: 0;
+}
+
+.language-card p {
+  color: #51606a;
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+.language-card h1 {
+  color: #14202a;
+  font-size: clamp(32px, 7vw, 54px);
+  line-height: 0.95;
+}
+
+.language-card > span {
+  color: #51606a;
+  font-size: 15px;
+  line-height: 1.5;
+}
+
+.language-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.language-actions button {
+  min-height: 88px;
+  display: grid;
+  align-content: center;
+  gap: 6px;
+  padding: 14px;
+  border: 2px solid #1e252b;
+  border-radius: 8px;
+  background: #f7f8f8;
+  color: #14202a;
+  text-align: left;
+  cursor: pointer;
+}
+
+.language-actions button:hover {
+  background: #e8f4f2;
+}
+
+.language-actions strong {
+  font-size: 16px;
+}
+
+.language-actions span {
+  color: #51606a;
+  font-size: 13px;
+  font-weight: 800;
+}
+
 .game-shell {
   height: 100svh;
   padding: 10px 18px;
@@ -79,6 +160,45 @@
 
 .tile:hover {
   filter: brightness(1.03);
+}
+
+.ai-focus-tile {
+  z-index: 18;
+  animation: aiTilePulse 0.35s ease-in-out infinite alternate;
+  box-shadow:
+    inset 0 0 0 4px #ffe15c,
+    0 0 0 3px rgba(17, 24, 32, 0.86),
+    0 0 22px rgba(255, 187, 36, 0.88);
+}
+
+.ai-focus-label {
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + 5px);
+  z-index: 35;
+  width: max-content;
+  max-width: min(220px, 24vw);
+  padding: 5px 7px;
+  border: 2px solid #111820;
+  border-radius: 6px;
+  background: #fff7d1;
+  color: #111820;
+  font-size: clamp(9px, 1.05vmin, 12px);
+  font-weight: 900;
+  line-height: 1.1;
+  text-align: center;
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+
+@keyframes aiTilePulse {
+  from {
+    filter: brightness(1);
+  }
+
+  to {
+    filter: brightness(1.16);
+  }
 }
 
 .tile:nth-child(2n).tile-placeholder {
@@ -633,6 +753,35 @@ button {
   font-style: normal;
   font-weight: 900;
   line-height: 1.05;
+}
+
+.turn-log-button {
+  min-height: 42px;
+  display: grid;
+  gap: 3px;
+  padding: 7px 9px;
+  border: 1px solid rgba(58, 76, 39, 0.3);
+  border-radius: 7px;
+  background: #f1f8e9;
+  color: #1d2b16;
+  text-align: left;
+}
+
+.turn-log-button span {
+  color: #4d652e;
+  font-size: 11px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.turn-log-button strong {
+  min-width: 0;
+  color: #1d2b16;
+  font-size: 12px;
+  line-height: 1.15;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .choice-modal-backdrop {
@@ -1981,6 +2130,75 @@ button {
   border: 1px dashed rgba(24, 35, 43, 0.45);
 }
 
+.turn-log-modal {
+  width: min(720px, calc(100vw - 32px));
+  display: grid;
+  gap: 12px;
+}
+
+.turn-log-list {
+  max-height: min(560px, calc(100svh - 180px));
+  display: grid;
+  gap: 8px;
+  overflow: auto;
+  padding-right: 2px;
+}
+
+.turn-log-entry {
+  display: grid;
+  grid-template-columns: 92px 1fr;
+  gap: 10px;
+  padding: 10px;
+  border: 1px solid rgba(30, 37, 43, 0.14);
+  border-left: 5px solid #5b6870;
+  border-radius: 7px;
+  background: rgba(255, 255, 255, 0.78);
+  text-align: left;
+}
+
+.turn-log-entry span {
+  color: #5b6870;
+  font-size: 11px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.turn-log-entry p {
+  margin: 0;
+  color: #24313a;
+  font-size: 13px;
+  font-weight: 750;
+  line-height: 1.25;
+}
+
+.log-business {
+  border-left-color: #238b75;
+}
+
+.log-event {
+  border-left-color: #6f4fb2;
+}
+
+.log-income {
+  border-left-color: #2e7d45;
+}
+
+.log-land {
+  border-left-color: #866426;
+}
+
+.log-movement {
+  border-left-color: #31576f;
+}
+
+.log-rent {
+  border-left-color: #9b2f24;
+}
+
+.log-winner {
+  border-left-color: #d09a18;
+}
+
 .net-worth-list {
   display: grid;
   gap: 10px;
@@ -2090,6 +2308,14 @@ button {
 }
 
 @media (max-width: 760px) {
+  .language-card {
+    padding: 22px;
+  }
+
+  .language-actions {
+    grid-template-columns: 1fr;
+  }
+
   .game-shell {
     height: auto;
     min-height: 100svh;

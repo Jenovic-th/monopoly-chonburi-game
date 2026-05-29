@@ -16,6 +16,8 @@ type Player = {
   colorClass: string
 }
 
+type Language = 'en' | 'th'
+
 type DiceRoll = {
   die1: number
   die2: number
@@ -104,6 +106,13 @@ type LeaseSharePayment = {
   amount: number
 }
 
+type TurnLogEntry = {
+  id: number
+  message: string
+  round: number
+  type: 'business' | 'event' | 'income' | 'land' | 'movement' | 'rent' | 'system' | 'winner'
+}
+
 type BusinessHolding = {
   id: string
   playerIndex: number
@@ -157,6 +166,113 @@ const players: Player[] = [
   },
 ]
 
+const uiText: Record<
+  Language,
+  {
+    appTitle: string
+    buyLand: string
+    chooseCard: string
+    chooseInfluence: string
+    chooseInvestment: string
+    chooseLanguage: string
+    chooseLanguageHint: string
+    chooseOption: string
+    choosePlan: string
+    demoLabel: string
+    devMode: string
+    devOn: string
+    english: string
+    event: string
+    fastForward: string
+    inPrison: string
+    latestEvents: string
+    netWorth: string
+    noEvents: string
+    prisonJackpot: string
+    readyStatus: string
+    reset: string
+    rollDice: string
+    selectEnglish: string
+    selectThai: string
+    skipMove: string
+    studying: string
+    thai: string
+    total: string
+    turn: string
+    turnLog: string
+    turnSummary: string
+  }
+> = {
+  en: {
+    appTitle: 'Chonburi Business Board',
+    buyLand: 'Buy Land',
+    chooseCard: 'Choose Card',
+    chooseInfluence: 'Choose Influence',
+    chooseInvestment: 'Choose Investment',
+    chooseLanguage: 'Choose Language',
+    chooseLanguageHint: 'Pick a language before starting. The language stays fixed during this game.',
+    chooseOption: 'Choose Option',
+    choosePlan: 'Choose Plan',
+    demoLabel: 'Demo 1',
+    devMode: 'Dev Mode',
+    devOn: 'Dev On',
+    english: 'English',
+    event: 'Event',
+    fastForward: 'Fast Forward',
+    inPrison: 'In Prison',
+    latestEvents: 'Latest Events',
+    netWorth: 'Net Worth',
+    noEvents: 'No events yet',
+    prisonJackpot: 'Prison Jackpot',
+    readyStatus: 'Ready. Roll to start the round.',
+    reset: 'Reset',
+    rollDice: 'Roll Dice',
+    selectEnglish: 'Play in English',
+    selectThai: 'เล่นภาษาไทย',
+    skipMove: 'Skip Move',
+    studying: 'Studying',
+    thai: 'Thai',
+    total: 'Total',
+    turn: 'Turn',
+    turnLog: 'Turn Log',
+    turnSummary: 'Turn Summary',
+  },
+  th: {
+    appTitle: 'เกมเศรษฐีชลบุรี',
+    buyLand: 'ซื้อที่ดิน',
+    chooseCard: 'เลือกการ์ด',
+    chooseInfluence: 'เลือกอิทธิพล',
+    chooseInvestment: 'เลือกลงทุน',
+    chooseLanguage: 'เลือกภาษา',
+    chooseLanguageHint: 'เลือกภาษาก่อนเริ่มเล่น ภาษาจะคงที่ระหว่างเกมนี้',
+    chooseOption: 'เลือกตัวเลือก',
+    choosePlan: 'เลือกแผน',
+    demoLabel: 'เดโม 1',
+    devMode: 'โหมดทดสอบ',
+    devOn: 'เปิดทดสอบ',
+    english: 'อังกฤษ',
+    event: 'เหตุการณ์',
+    fastForward: 'เร่งเทิร์น',
+    inPrison: 'ติดคุก',
+    latestEvents: 'เหตุการณ์ล่าสุด',
+    netWorth: 'มูลค่ารวม',
+    noEvents: 'ยังไม่มีเหตุการณ์',
+    prisonJackpot: 'เงินกองกลางคุก',
+    readyStatus: 'พร้อมแล้ว กดทอยเต๋าเพื่อเริ่มรอบ',
+    reset: 'เริ่มใหม่',
+    rollDice: 'ทอยเต๋า',
+    selectEnglish: 'Play in English',
+    selectThai: 'เล่นภาษาไทย',
+    skipMove: 'ข้ามการเดิน',
+    studying: 'กำลังเรียน',
+    thai: 'ไทย',
+    total: 'รวม',
+    turn: 'เทิร์น',
+    turnLog: 'บันทึกเทิร์น',
+    turnSummary: 'สรุปเทิร์น',
+  },
+}
+
 const tileCount = 40
 const startingCash = 100000
 const passStartIncome = 20000
@@ -173,6 +289,8 @@ const buraphaTile = 10
 const localPowerBrokerTile = 30
 const walkDelayMs = 55
 const aiDelayMs = 140
+const aiFocusMs = 700
+const maxTurnLogEntries = 12
 const noCardTiles = new Set([0, 5, 10, 20, 30])
 const investmentUnlockRanges = [9, 19, 29, 39]
 const testMoveOptions = Array.from({ length: 12 }, (_, index) => index + 1)
@@ -394,10 +512,16 @@ function App() {
   const [isDevMode, setIsDevMode] = useState(false)
   const [isLedgerVisible, setIsLedgerVisible] = useState(true)
   const [investmentModalOffset, setInvestmentModalOffset] = useState({ x: 0, y: 0 })
+  const [isTurnLogOpen, setIsTurnLogOpen] = useState(false)
+  const [turnLog, setTurnLog] = useState<TurnLogEntry[]>([])
+  const [aiFocusTile, setAiFocusTile] = useState<number | null>(null)
+  const [aiFocusLabel, setAiFocusLabel] = useState<string | null>(null)
+  const [selectedLanguage, setSelectedLanguage] = useState<Language | null>(null)
 
   const skipRequestedRef = useRef(false)
   const activeRunRef = useRef(false)
   const runIdRef = useRef(0)
+  const turnLogIdRef = useRef(0)
   const positionsRef = useRef<number[]>(players.map(() => 0))
   const educationRef = useRef<EducationState>({
     stage: 'none',
@@ -422,6 +546,7 @@ function App() {
   const investmentChoiceResolverRef = useRef<(() => void) | null>(null)
   const politicalEventResolverRef = useRef<(() => void) | null>(null)
   const influenceChoiceResolverRef = useRef<(() => void) | null>(null)
+  const aiFocusTimeoutRef = useRef<number | null>(null)
   const investmentModalDragRef = useRef<{
     originX: number
     originY: number
@@ -429,6 +554,7 @@ function App() {
     startX: number
     startY: number
   } | null>(null)
+  const text = uiText[selectedLanguage ?? 'en']
 
   const tileOccupants = useMemo(() => {
     return positions.reduce<Record<number, number[]>>((occupants, position, index) => {
@@ -509,6 +635,46 @@ function App() {
   function updateLeasePressurePlayers(nextLeasePressurePlayers: boolean[]) {
     leasePressurePlayersRef.current = nextLeasePressurePlayers
     setLeasePressurePlayers(nextLeasePressurePlayers)
+  }
+
+  function addTurnLog(type: TurnLogEntry['type'], message: string) {
+    turnLogIdRef.current += 1
+    setTurnLog((entries) =>
+      [
+        {
+          id: turnLogIdRef.current,
+          message,
+          round: runIdRef.current,
+          type,
+        },
+        ...entries,
+      ].slice(0, maxTurnLogEntries),
+    )
+  }
+
+  async function flashAiFocus(tileId: number, label: string, runId: number) {
+    if (runId !== runIdRef.current) {
+      return
+    }
+
+    if (aiFocusTimeoutRef.current !== null) {
+      window.clearTimeout(aiFocusTimeoutRef.current)
+      aiFocusTimeoutRef.current = null
+    }
+
+    setAiFocusTile(tileId)
+    setAiFocusLabel(label)
+    aiFocusTimeoutRef.current = window.setTimeout(() => {
+      setAiFocusTile(null)
+      setAiFocusLabel(null)
+      aiFocusTimeoutRef.current = null
+    }, aiFocusMs)
+
+    await wait(aiFocusMs)
+
+    if (runId !== runIdRef.current) {
+      return
+    }
   }
 
   function getEducationIncomeBonusRate(playerIndex: number) {
@@ -718,9 +884,9 @@ function App() {
     updatePrisonTurns(nextPrisonTurns)
     updatePrisonJackpot(prisonJackpotRef.current + jackpotContribution)
     setPhase('prison-skip')
-    setStatus(
-      `${players[playerIndex].name} is in Chonburi Prison. Skipped turn: ${nextPrisonTurns[playerIndex]} left. ${formatMoney(jackpotContribution)} moved into Prison Jackpot.`,
-    )
+    const prisonMessage = `${players[playerIndex].name} is in Chonburi Prison. Skipped turn: ${nextPrisonTurns[playerIndex]} left. ${formatMoney(jackpotContribution)} moved into Prison Jackpot.`
+    setStatus(prisonMessage)
+    addTurnLog('event', prisonMessage)
 
     await wait(aiDelayMs)
 
@@ -770,9 +936,9 @@ function App() {
         payout.totalLeaseShare > 0
           ? ` Open Lease paid ${formatMoney(payout.totalLeaseShare)} to land owner${payout.leaseShares.length > 1 ? 's' : ''}.`
           : ''
-      setStatus(
-        `${players[playerIndex].name} passed Investment Bank and received ${formatMoney(payout.totalIncome)}.${eventText}${leaseText} Cash: ${formatMoney(payout.nextCash)}.`,
-      )
+      const incomeMessage = `${players[playerIndex].name} passed Investment Bank and received ${formatMoney(payout.totalIncome)}.${eventText}${leaseText} Cash: ${formatMoney(payout.nextCash)}.`
+      setStatus(incomeMessage)
+      addTurnLog('income', incomeMessage)
     } else {
       setStatus(`${players[playerIndex].name} stopped at ${boardTiles[finalPosition].name}.`)
     }
@@ -811,11 +977,15 @@ function App() {
     forcedMoveRef.current = null
     const roll = forcedMove === null ? rollDice() : { die1: forcedMove, die2: 0, total: forcedMove }
     setLatestRoll(roll)
-    setStatus(
+    const rollMessage =
       forcedMove === null
-        ? `${player.name} rolled ${roll.die1} + ${roll.die2} = ${roll.total}.`
-        : `${player.name} test moved ${roll.total} spaces.`,
-    )
+      ? `${player.name} rolled ${roll.die1} + ${roll.die2} = ${roll.total}.`
+      : `${player.name} test moved ${roll.total} spaces.`
+    setStatus(rollMessage)
+    addTurnLog('movement', rollMessage)
+    if (player.role === 'AI') {
+      void flashAiFocus(positionsRef.current[playerIndex], `${player.name} rolling`, runId)
+    }
     setRollHistory((history) => [
       forcedMove === null
         ? `${player.name}: ${roll.die1} + ${roll.die2} = ${roll.total}`
@@ -825,6 +995,10 @@ function App() {
 
     const finalPosition = await movePlayer(playerIndex, roll.total, runId)
 
+    if (player.role === 'AI' && typeof finalPosition === 'number') {
+      await flashAiFocus(finalPosition, `${player.name} stopped here`, runId)
+    }
+
     const rentResult =
       typeof finalPosition === 'number' ? payLandRent(playerIndex, finalPosition) : null
     const rentMessage = rentResult
@@ -832,11 +1006,12 @@ function App() {
       : ''
 
     if (rentResult) {
-      setStatus(
+      const rentLogMessage =
         rentResult.rentPaid < rentResult.rentDue
           ? `${rentMessage} Rent due was ${formatMoney(rentResult.rentDue)}, but ${player.name} only had enough to pay ${formatMoney(rentResult.rentPaid)}.`
-          : rentMessage,
-      )
+          : rentMessage
+      setStatus(rentLogMessage)
+      addTurnLog('rent', rentLogMessage)
     }
 
     if (
@@ -973,11 +1148,11 @@ function App() {
     nextCoupons[playerIndex] = true
     updatePrisonContactCoupons(nextCoupons)
 
-    setStatus(
-      alreadyHasCoupon
-        ? `${players[playerIndex].name} visited Chonburi Prison Bazaar and already has a Prison Contact Coupon.`
-        : `${players[playerIndex].name} received a Prison Contact Coupon: ${Math.round(prisonContactDiscountRate * 100)}% off the next influence card purchase.`,
-    )
+    const prisonBazaarMessage = alreadyHasCoupon
+      ? `${players[playerIndex].name} visited Chonburi Prison Bazaar and already has a Prison Contact Coupon.`
+      : `${players[playerIndex].name} received a Prison Contact Coupon: ${Math.round(prisonContactDiscountRate * 100)}% off the next influence card purchase.`
+    setStatus(prisonBazaarMessage)
+    addTurnLog('event', prisonBazaarMessage)
 
     await wait(aiDelayMs)
 
@@ -1042,9 +1217,11 @@ function App() {
     const player = players[playerIndex]
     const event = drawPoliticalEvent()
     const effectResult = applyPoliticalEvent(event, playerIndex)
+    const eventMessage = `${player.name} triggered ${event.title}. ${effectResult}`
+    addTurnLog('event', eventMessage)
 
     if (player.role === 'AI') {
-      setStatus(`${player.name} triggered ${event.title}. ${effectResult}`)
+      setStatus(eventMessage)
       await wait(aiDelayMs)
       return
     }
@@ -1243,6 +1420,9 @@ function App() {
 
   function resolveCardChoice(message: string) {
     setStatus(message)
+    if (message !== 'Skipped card choice.') {
+      addTurnLog('business', message)
+    }
     cardChoiceResolverRef.current?.()
   }
 
@@ -1262,6 +1442,7 @@ function App() {
 
     if (message) {
       setStatus(message)
+      addTurnLog('land', message)
     }
   }
 
@@ -1436,6 +1617,9 @@ function App() {
 
   function resolveInvestmentChoice(message: string) {
     setStatus(message)
+    if (!message.startsWith('Skipped')) {
+      addTurnLog('business', message)
+    }
     investmentChoiceResolverRef.current?.()
   }
 
@@ -1555,11 +1739,14 @@ function App() {
     }
 
     const result = buyLandForPlayer(playerIndex, tileId)
-    setStatus(
-      result.success
-        ? `AI land buyout: ${result.message}`
-        : `${players[playerIndex].name} skipped land buyout. ${result.message}`,
-    )
+    const landMessage = result.success
+      ? `AI land buyout: ${result.message}`
+      : `${players[playerIndex].name} skipped land buyout. ${result.message}`
+    setStatus(landMessage)
+    if (result.success) {
+      addTurnLog('land', landMessage)
+      await flashAiFocus(tileId, `${players[playerIndex].name} bought land`, runId)
+    }
     await wait(aiDelayMs)
 
     if (runId !== runIdRef.current) {
@@ -1579,11 +1766,14 @@ function App() {
     }
 
     const result = purchaseBusinessCardForPlayer(playerIndex, choice.card, choice.tileId)
-    setStatus(
-      result.success
-        ? `${context}: ${result.message}`
-        : `${players[playerIndex].name} skipped ${context}. ${result.message}`,
-    )
+    const businessMessage = result.success
+      ? `${context}: ${result.message}`
+      : `${players[playerIndex].name} skipped ${context}. ${result.message}`
+    setStatus(businessMessage)
+    if (result.success) {
+      addTurnLog('business', businessMessage)
+      await flashAiFocus(choice.tileId, `${players[playerIndex].name} chose ${choice.card.title}`, runId)
+    }
     await wait(aiDelayMs)
 
     if (runId !== runIdRef.current) {
@@ -1611,11 +1801,14 @@ function App() {
     }
 
     const result = purchaseBusinessCardForPlayer(playerIndex, choice.card, choice.tileId)
-    setStatus(
-      result.success
-        ? `Investment Bank AI choice: ${result.message}`
-        : `${players[playerIndex].name} skipped Investment Bank. ${result.message}`,
-    )
+    const investmentMessage = result.success
+      ? `Investment Bank AI choice: ${result.message}`
+      : `${players[playerIndex].name} skipped Investment Bank. ${result.message}`
+    setStatus(investmentMessage)
+    if (result.success) {
+      addTurnLog('business', investmentMessage)
+      await flashAiFocus(choice.tileId, `${players[playerIndex].name} invested here`, runId)
+    }
     await wait(aiDelayMs)
 
     if (runId !== runIdRef.current) {
@@ -1645,9 +1838,8 @@ function App() {
     const playerCash = cashRef.current[playerIndex]
 
     if (playerCash < finalPrice) {
-      resolveInfluenceChoice(
-        `${players[playerIndex].name} needs ${formatMoney(finalPrice)} but only has ${formatMoney(playerCash)}.`,
-      )
+      const message = `${players[playerIndex].name} needs ${formatMoney(finalPrice)} but only has ${formatMoney(playerCash)}.`
+      resolveInfluenceChoice(message)
       return
     }
 
@@ -1675,9 +1867,8 @@ function App() {
         effect: card.effect,
       },
     ])
-    resolveInfluenceChoice(
-      `${players[playerIndex].name} bought ${card.title} for ${formatMoney(finalPrice)}${discount > 0 ? ` after ${formatMoney(discount)} Prison Contact discount` : ''}. It is now in their hand (${playerCards.length + 1}/${maxInfluenceCards}).`,
-    )
+    const message = `${players[playerIndex].name} bought ${card.title} for ${formatMoney(finalPrice)}${discount > 0 ? ` after ${formatMoney(discount)} Prison Contact discount` : ''}. It is now in their hand (${playerCards.length + 1}/${maxInfluenceCards}).`
+    resolveInfluenceChoice(message)
   }
 
   function removeInfluenceCard(cardId: string) {
@@ -1738,9 +1929,9 @@ function App() {
       )
       removeInfluenceCard(card.id)
       const riskText = resolveInfluenceJailRisk(card.playerIndex)
-      setStatus(
-        `${players[card.playerIndex].name} used Lease Pressure. Their next Open Lease collection is 20% instead of 10%.${riskText}`,
-      )
+      const influenceMessage = `${players[card.playerIndex].name} used Lease Pressure. Their next Open Lease collection is 20% instead of 10%.${riskText}`
+      setStatus(influenceMessage)
+      addTurnLog('event', influenceMessage)
       return
     }
 
@@ -1757,9 +1948,9 @@ function App() {
     ])
     removeInfluenceCard(card.id)
     const riskText = resolveInfluenceJailRisk(card.playerIndex)
-    setStatus(
-      `${players[card.playerIndex].name} used Port Connection. Industrial and port income is 140% on the next tile 00 income collection.${riskText}`,
-    )
+    const influenceMessage = `${players[card.playerIndex].name} used Port Connection. Industrial and port income is 140% on the next tile 00 income collection.${riskText}`
+    setStatus(influenceMessage)
+    addTurnLog('event', influenceMessage)
   }
 
   function evictBusiness(card: InfluenceHolding, businessId: string) {
@@ -1779,9 +1970,9 @@ function App() {
     removeInfluenceCard(card.id)
     setEvictionCard(null)
     const riskText = resolveInfluenceJailRisk(card.playerIndex)
-    setStatus(
-      `${players[card.playerIndex].name} used Influence Eviction on ${players[targetBusiness.playerIndex].name}'s ${targetBusiness.title} at ${boardTiles[targetBusiness.tileId].name}. The owner recovered ${formatMoney(refund)}.${riskText}`,
-    )
+    const evictionMessage = `${players[card.playerIndex].name} used Influence Eviction on ${players[targetBusiness.playerIndex].name}'s ${targetBusiness.title} at ${boardTiles[targetBusiness.tileId].name}. The owner recovered ${formatMoney(refund)}.${riskText}`
+    setStatus(evictionMessage)
+    addTurnLog('event', evictionMessage)
   }
 
   function openInvestmentCards(tile: number) {
@@ -1806,9 +1997,8 @@ function App() {
     const playerCash = cashRef.current[playerIndex]
 
     if (playerCash < tuition) {
-      setStatus(
-        `${players[playerIndex].name} needs ${formatMoney(tuition)} for ${activeStudy === 'bachelor' ? 'bachelor study' : 'master degree'} but only has ${formatMoney(playerCash)}.`,
-      )
+      const message = `${players[playerIndex].name} needs ${formatMoney(tuition)} for ${activeStudy === 'bachelor' ? 'bachelor study' : 'master degree'} but only has ${formatMoney(playerCash)}.`
+      setStatus(message)
       return
     }
 
@@ -1820,11 +2010,12 @@ function App() {
       activeStudy,
       skipTurns: studySkipTurns,
     })
-    resolveEducationChoice(
+    const studyMessage =
       activeStudy === 'bachelor'
         ? `${players[playerIndex].name} paid ${formatMoney(tuition)} and started bachelor study at Burapha University. Skip ${studySkipTurns} turns, then business income becomes +${educationIncomeBonus.bachelorCompleted}%. Cash left: ${formatMoney(nextCash[playerIndex])}.`
-        : `${players[playerIndex].name} paid ${formatMoney(tuition)} and started master degree at Burapha University. Skip ${studySkipTurns} turns, then business income becomes +${educationIncomeBonus.masterCompleted}%. Cash left: ${formatMoney(nextCash[playerIndex])}.`,
-    )
+        : `${players[playerIndex].name} paid ${formatMoney(tuition)} and started master degree at Burapha University. Skip ${studySkipTurns} turns, then business income becomes +${educationIncomeBonus.masterCompleted}%. Cash left: ${formatMoney(nextCash[playerIndex])}.`
+    addTurnLog('event', studyMessage)
+    resolveEducationChoice(studyMessage)
   }
 
   function resetGame() {
@@ -1855,6 +2046,14 @@ function App() {
     updatePrisonContactCoupons(players.map(() => false))
     updateInfluenceHoldings([])
     updateLeasePressurePlayers(players.map(() => false))
+    setTurnLog([])
+    turnLogIdRef.current = 0
+    if (aiFocusTimeoutRef.current !== null) {
+      window.clearTimeout(aiFocusTimeoutRef.current)
+      aiFocusTimeoutRef.current = null
+    }
+    setAiFocusTile(null)
+    setAiFocusLabel(null)
     setInvestmentOffer(null)
     setSelectedInvestmentTile(null)
     setSelectedLandTile(null)
@@ -1868,8 +2067,13 @@ function App() {
     setIsDevMode(false)
     setPhase('ready')
     setLatestRoll(null)
-    setStatus('Game reset. Roll to start the round.')
+    setStatus(text.readyStatus)
     setRollHistory([])
+  }
+
+  function startGameWithLanguage(language: Language) {
+    setSelectedLanguage(language)
+    setStatus(uiText[language].readyStatus)
   }
 
   function clampInvestmentModalOffset(x: number, y: number) {
@@ -1917,28 +2121,28 @@ function App() {
 
   const primaryButtonText =
     phase === 'ready'
-      ? 'Roll Dice'
+      ? text.rollDice
       : phase === 'ai-delay'
-        ? 'Fast Forward'
+        ? text.fastForward
         : phase === 'card-choice'
-          ? 'Choose Card'
+          ? text.chooseCard
           : phase === 'education-choice'
-            ? 'Choose Option'
+            ? text.chooseOption
             : phase === 'study-skip'
-              ? 'Studying'
+              ? text.studying
               : phase === 'prison-skip'
-                ? 'In Prison'
+                ? text.inPrison
                 : phase === 'investment-choice'
-                  ? 'Choose Investment'
+                  ? text.chooseInvestment
                   : phase === 'investment-card-choice'
-                    ? 'Choose Plan'
+                    ? text.choosePlan
                     : phase === 'political-event'
-                      ? 'Event'
+                      ? text.event
                       : phase === 'land-choice'
-                        ? 'Buy Land'
+                        ? text.buyLand
                         : phase === 'influence-choice'
-                          ? 'Choose Influence'
-                          : 'Skip Move'
+                          ? text.chooseInfluence
+                          : text.skipMove
   const activeTile = boardTiles[positions[currentPlayerIndex]]
   const isInvestmentModalPhase =
     phase === 'investment-choice' || phase === 'investment-card-choice'
@@ -2150,6 +2354,28 @@ function App() {
               : 'Not enrolled'
       : 'No education track'
 
+  if (!selectedLanguage) {
+    return (
+      <main className="language-shell">
+        <section className="language-card" aria-label={text.chooseLanguage}>
+          <p>{text.demoLabel}</p>
+          <h1>{text.appTitle}</h1>
+          <span>{text.chooseLanguageHint}</span>
+          <div className="language-actions">
+            <button type="button" onClick={() => startGameWithLanguage('th')}>
+              <strong>{text.selectThai}</strong>
+              <span>{uiText.th.thai}</span>
+            </button>
+            <button type="button" onClick={() => startGameWithLanguage('en')}>
+              <strong>{text.selectEnglish}</strong>
+              <span>{uiText.en.english}</span>
+            </button>
+          </div>
+        </section>
+      </main>
+    )
+  }
+
   return (
     <main className={`game-shell ${isLedgerVisible ? '' : 'board-focus'}`}>
       <button
@@ -2189,14 +2415,16 @@ function App() {
             const landHolding = landHoldingByTile[tile]
             const isCorner = tile === 0 || tile === 10 || tile === 20 || tile === 30
             const tileData = boardTiles[tile]
+            const isAiFocused = aiFocusTile === tile
 
             return (
               <div
-                className={`tile tile-${tileData.category} ${isCorner ? 'corner-tile' : ''} ${tile === 0 ? 'start-tile' : ''}`}
+                className={`tile tile-${tileData.category} ${isCorner ? 'corner-tile' : ''} ${tile === 0 ? 'start-tile' : ''} ${isAiFocused ? 'ai-focus-tile' : ''}`}
                 key={tile}
                 onClick={() => openLandDetail(tile)}
                 style={getTileGridPosition(tile)}
               >
+                {isAiFocused && aiFocusLabel && <span className="ai-focus-label">{aiFocusLabel}</span>}
                 <span className="tile-number">{tile.toString().padStart(2, '0')}</span>
                 <span className="tile-name">{tileData.name}</span>
                 {tileData.landPrice && (
@@ -2246,19 +2474,19 @@ function App() {
           })}
           <div className="turn-console">
           <div>
-            <p className="eyebrow">Demo 0.1</p>
-            <h1>Monopoly Movement Prototype</h1>
+            <p className="eyebrow">{text.demoLabel}</p>
+            <h1>{text.appTitle}</h1>
           </div>
 
           <div className="turn-display">
-            <span>Turn</span>
+            <span>{text.turn}</span>
             <strong>{players[currentPlayerIndex].name}</strong>
           </div>
 
           <div className="dice-row" aria-label="Latest dice roll">
             <div className="die">{latestRoll?.die1 ?? '-'}</div>
             <div className="die">{latestRoll?.die2 ?? '-'}</div>
-            <div className="total">Total {latestRoll?.total ?? '-'}</div>
+            <div className="total">{text.total} {latestRoll?.total ?? '-'}</div>
           </div>
 
           <button
@@ -2282,10 +2510,10 @@ function App() {
 
           <div className="console-actions">
             <button className="secondary-action" type="button" onClick={resetGame}>
-              Reset
+              {text.reset}
             </button>
             <button className="secondary-action" type="button" onClick={() => setIsDevMode((value) => !value)}>
-              {isDevMode ? 'Dev On' : 'Dev Mode'}
+              {isDevMode ? text.devOn : text.devMode}
             </button>
           </div>
 
@@ -2325,15 +2553,20 @@ function App() {
 
           <p className="status-text">{status}</p>
 
-          <div className="jackpot-summary" aria-label="Prison Jackpot">
-            <span>Prison Jackpot</span>
+          <div className="jackpot-summary" aria-label={text.prisonJackpot}>
+            <span>{text.prisonJackpot}</span>
             <strong>{formatMoney(prisonJackpot)}</strong>
           </div>
 
           <button className="net-worth-button" type="button" onClick={() => setIsNetWorthOpen(true)}>
-            <span>Net Worth</span>
+            <span>{text.netWorth}</span>
             <strong>{players[netWorthRows[0].playerIndex].name}</strong>
             <em>{formatMoney(netWorthRows[0].total)}</em>
+          </button>
+
+          <button className="turn-log-button" type="button" onClick={() => setIsTurnLogOpen(true)}>
+            <span>{text.turnLog}</span>
+            <strong>{turnLog[0]?.message ?? text.noEvents}</strong>
           </button>
 
           <div className="compact-tile-summary" aria-label="Current tile summary">
@@ -3253,6 +3486,35 @@ function App() {
           </div>
         )}
 
+        {isTurnLogOpen && (
+          <div className="choice-modal-backdrop">
+            <div className="choice-modal turn-log-modal" role="dialog" aria-modal="true">
+              <div className="detail-modal-header">
+                <div>
+                  <span>{text.turnSummary}</span>
+                  <strong>{text.latestEvents}</strong>
+                </div>
+                <button type="button" onClick={() => setIsTurnLogOpen(false)}>
+                  Close
+                </button>
+              </div>
+
+              <div className="turn-log-list">
+                {turnLog.length === 0 ? (
+                  <p className="empty-detail">{text.noEvents}</p>
+                ) : (
+                  turnLog.map((entry) => (
+                    <div className={`turn-log-entry log-${entry.type}`} key={entry.id}>
+                      <span>{entry.type}</span>
+                      <p>{entry.message}</p>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
         {winnerRow && !isWinnerDismissed && (
           <div className="choice-modal-backdrop">
             <div className="choice-modal winner-modal" role="dialog" aria-modal="true">
@@ -3281,8 +3543,8 @@ function App() {
                         <span>{row.player.role}</span>
                       </div>
                     </div>
-                    <div className="rank-total">
-                      <span>Net Worth</span>
+                  <div className="rank-total">
+                      <span>{text.netWorth}</span>
                       <strong>{formatMoney(row.total)}</strong>
                     </div>
                   </div>
@@ -3294,6 +3556,10 @@ function App() {
                   type="button"
                   onClick={() => {
                     setIsWinnerDismissed(true)
+                    addTurnLog(
+                      'winner',
+                      `${winnerRow.player.name} reached ${formatMoney(winnerRow.total)} net worth. Target was ${formatMoney(netWorthWinTarget)}.`,
+                    )
                     setStatus('Winner popup dismissed. Continue testing Demo 1 balance.')
                   }}
                 >
@@ -3313,7 +3579,7 @@ function App() {
               <div className="detail-modal-header">
                 <div>
                   <span>Current Ranking</span>
-                  <strong>Net Worth</strong>
+                  <strong>{text.netWorth}</strong>
                 </div>
                 <button type="button" onClick={() => setIsNetWorthOpen(false)}>
                   Close
@@ -3332,7 +3598,7 @@ function App() {
                       </div>
                     </div>
                     <div className="rank-total">
-                      <span>Total</span>
+                      <span>{text.total}</span>
                       <strong>{formatMoney(row.total)}</strong>
                     </div>
                     <dl className="rank-breakdown">

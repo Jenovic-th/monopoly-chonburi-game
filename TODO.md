@@ -177,6 +177,18 @@
 - [x] Make Investment Bank popup movable:
   - drag handle lets the player move the popup away from board tiles
   - position resets when a new Investment Bank choice starts
+- [x] Add Turn Summary Log v1:
+  - compact center-board button opens a popup
+  - records latest 12 important events
+  - keeps the board uncluttered during play
+- [x] Add pre-game language selection v1:
+  - choose Thai or English before starting
+  - keep the chosen language fixed during that game
+  - translate core board/control labels first
+- [x] Add AI board focus/highlight v1:
+  - flash the tile AI is acting on
+  - highlight AI business, Investment Bank, and land purchase actions
+  - avoid fake mouse movement and avoid extra popups
 
 ## Next
 
@@ -245,6 +257,12 @@
   - try buying/upgrading businesses before land buyout
   - value land by landing rent, existing own business, and tenant business Open Lease
 - [ ] Add AI land buyout balance tuning after playtesting.
+- [ ] Add full translation map for dynamic gameplay text:
+  - status messages
+  - turn log messages
+  - card titles/descriptions
+  - tile names/descriptions
+  - modal detail copy
 - [ ] Update README with setup, dev, and project overview.
 
 ## Design Questions

@@ -1,5 +1,23 @@
 # DEVLOG
 
+## 2026-05-29
+
+### Added
+
+- Added language selection v1 before the game starts:
+  - player chooses Thai or English on a start screen,
+  - selected language stays fixed for that game session,
+  - main board labels now use the selected language for core UI such as title, turn, dice total, reset, Dev Mode, Prison Jackpot, Net Worth, Turn Log, and primary action button labels.
+- Added AI board focus v1:
+  - AI turns now flash/highlight the tile where the AI is rolling from or has stopped,
+  - AI business choices, Investment Bank choices, and land purchases highlight the affected tile,
+  - the effect is a short board-level cue instead of a popup or fake mouse movement.
+### Deferred
+
+- Full translation of dynamic rule messages, player logs, card text, tile data, and detailed modal copy is intentionally deferred.
+- Recommended next step is to move player-facing game text into a shared translation map before translating card and event content.
+- Outcome details should stay in the existing status line and Turn Log instead of floating notices, because the floating notice was too distracting during play.
+
 ## 2026-05-28
 
 ### Added
@@ -29,6 +47,11 @@
   - investment choice and investment card popups now have a drag handle,
   - the popup can be moved out of the way to inspect board tiles,
   - the popup returns to the center each time a new Investment Bank choice starts.
+- Added Turn Summary Log v1:
+  - center board panel now has a compact `Turn Log` button,
+  - log opens in a popup instead of taking permanent board space,
+  - latest events include rolls, income, rent, business purchases/upgrades, land buyouts, political/prison/influence events, and winner acknowledgement,
+  - only the latest 12 entries are kept for readability.
 
 ### Verified
 
