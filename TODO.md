@@ -189,6 +189,9 @@
   - flash the tile AI is acting on
   - highlight AI business, Investment Bank, and land purchase actions
   - avoid fake mouse movement and avoid extra popups
+- [x] Add detailed cross-machine handoff:
+  - `HANDOFF.md` explains setup, current systems, user preferences, next steps, and known Git issue
+  - `README.md` now points future work to `HANDOFF.md`, `DEVLOG.md`, and `TODO.md`
 
 ## Next
 

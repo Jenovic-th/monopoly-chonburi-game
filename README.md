@@ -1,4 +1,44 @@
-# React + TypeScript + Vite
+# Monopoly Chonburi Game
+
+Single-player Chonburi-themed board game prototype built with React, TypeScript, and Vite.
+
+For current project status, setup steps, gameplay systems, user preferences, and the next development plan, start here:
+
+- [HANDOFF.md](./HANDOFF.md)
+- [DEVLOG.md](./DEVLOG.md)
+- [TODO.md](./TODO.md)
+
+## Quick Start
+
+```powershell
+git pull origin main
+npm.cmd install
+npm.cmd run dev
+```
+
+Then open the local URL printed by Vite, normally:
+
+```text
+http://localhost:5173/
+```
+
+## Validation
+
+Run these before pushing changes:
+
+```powershell
+npm.cmd run check:encoding
+npm.cmd run lint
+npm.cmd run build
+```
+
+## Tech Stack
+
+- React
+- TypeScript
+- Vite
+
+## Original Vite Notes
 
 This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
 

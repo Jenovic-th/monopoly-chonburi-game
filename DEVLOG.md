@@ -4,6 +4,16 @@
 
 ### Added
 
+- Added `HANDOFF.md` for working across computers or with another AI assistant:
+  - includes setup commands,
+  - latest GitHub commit,
+  - implemented gameplay systems,
+  - important constants,
+  - user preferences,
+  - next recommended development steps,
+  - validation commands,
+  - known Git/Windows permission warning on the office machine.
+- Updated `README.md` so the handoff file is the first entry point instead of the default Vite readme.
 - Added language selection v1 before the game starts:
   - player chooses Thai or English on a start screen,
   - selected language stays fixed for that game session,
