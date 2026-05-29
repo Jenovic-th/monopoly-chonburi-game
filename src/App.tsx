@@ -517,6 +517,8 @@ function App() {
   const [aiFocusTile, setAiFocusTile] = useState<number | null>(null)
   const [aiFocusLabel, setAiFocusLabel] = useState<string | null>(null)
   const [selectedLanguage, setSelectedLanguage] = useState<Language | null>(null)
+  const [aiChoiceCardId, setAiChoiceCardId] = useState<string | null>(null)
+  const [aiChoiceSkipBusiness, setAiChoiceSkipBusiness] = useState(false)
 
   const skipRequestedRef = useRef(false)
   const activeRunRef = useRef(false)
@@ -1641,7 +1643,7 @@ function App() {
       Math.round(getRawBusinessIncomeForPlayer(playerIndex) * 0.35),
     )
 
-    return getBusinessCardsForTile(boardTiles[tileId])
+    return getBusinessCardsForTile(boardTiles[tileId], selectedLanguage ?? 'en')
       .map((card) => {
         const existingBusiness = businessesRef.current.find(
           (business) =>
@@ -1738,14 +1740,29 @@ function App() {
       return
     }
 
+    // AI decides to buy the land! Let's show the land buyout popup and highlight the Buy button.
+    setSelectedLandTile(tileId)
+    setPhase('land-choice')
+    setAiChoiceCardId('buy-land')
+
+    await wait(1500)
+
+    setAiChoiceCardId(null)
+    setSelectedLandTile(null)
+    setPhase('ready')
+
     const result = buyLandForPlayer(playerIndex, tileId)
     const landMessage = result.success
-      ? `AI land buyout: ${result.message}`
-      : `${players[playerIndex].name} skipped land buyout. ${result.message}`
+      ? (selectedLanguage === 'th'
+        ? `กว้านซื้อที่ดิน (AI): ${result.message}`
+        : `AI land buyout: ${result.message}`)
+      : (selectedLanguage === 'th'
+        ? `${players[playerIndex].name} ข้ามการซื้อที่ดิน. ${result.message}`
+        : `${players[playerIndex].name} skipped land buyout. ${result.message}`)
     setStatus(landMessage)
     if (result.success) {
       addTurnLog('land', landMessage)
-      await flashAiFocus(tileId, `${players[playerIndex].name} bought land`, runId)
+      await flashAiFocus(tileId, selectedLanguage === 'th' ? `${players[playerIndex].name} ซื้อที่ดิน` : `${players[playerIndex].name} bought land`, runId)
     }
     await wait(aiDelayMs)
 
@@ -1755,15 +1772,27 @@ function App() {
   }
 
   async function applyAiBusinessChoice(playerIndex: number, tileId: number, context: string, runId: number) {
+    setPhase('card-choice')
+
     const choice = getAiBusinessChoice(playerIndex, tileId)
 
     if (!choice) {
+      setAiChoiceSkipBusiness(true)
       setStatus(
-        `${players[playerIndex].name} skipped ${context} at ${boardTiles[tileId].name} to keep cash reserve.`,
+        selectedLanguage === 'th'
+          ? `${players[playerIndex].name} ข้าม ${context} ที่ ${boardTiles[tileId].name} เพื่อรักษาเงินสดสำรอง`
+          : `${players[playerIndex].name} skipped ${context} at ${boardTiles[tileId].name} to keep cash reserve.`,
       )
-      await wait(aiDelayMs)
+      await wait(1500)
+      setAiChoiceSkipBusiness(false)
+      setPhase('ready')
       return
     }
+
+    setAiChoiceCardId(choice.card.id)
+    await wait(1500)
+    setAiChoiceCardId(null)
+    setPhase('ready')
 
     const result = purchaseBusinessCardForPlayer(playerIndex, choice.card, choice.tileId)
     const businessMessage = result.success
@@ -1772,7 +1801,7 @@ function App() {
     setStatus(businessMessage)
     if (result.success) {
       addTurnLog('business', businessMessage)
-      await flashAiFocus(choice.tileId, `${players[playerIndex].name} chose ${choice.card.title}`, runId)
+      await flashAiFocus(choice.tileId, selectedLanguage === 'th' ? `${players[playerIndex].name} เลือก ${choice.card.title}` : `${players[playerIndex].name} chose ${choice.card.title}`, runId)
     }
     await wait(aiDelayMs)
 
@@ -1782,6 +1811,10 @@ function App() {
   }
 
   async function applyAiInvestmentBankChoice(playerIndex: number, options: number[], runId: number) {
+    const nextVisits = [...investmentVisitsRef.current]
+    const visitCount = nextVisits[playerIndex]
+    const maxTile = options[options.length - 1] ?? 12
+
     const choice =
       options
         .map((tileId) => getAiBusinessChoice(playerIndex, tileId))
@@ -1795,19 +1828,49 @@ function App() {
         })[0] ?? null
 
     if (!choice) {
-      setStatus(`${players[playerIndex].name} skipped Investment Bank to keep cash reserve.`)
-      await wait(aiDelayMs)
+      setInvestmentOffer({
+        playerIndex,
+        visitCount,
+        maxTile,
+        options,
+      })
+      setPhase('investment-choice')
+      setAiChoiceSkipBusiness(true)
+      setStatus(
+        selectedLanguage === 'th'
+          ? `${players[playerIndex].name} ข้ามการร่วมลงทุนเพื่อรักษาเงินสดสำรอง`
+          : `${players[playerIndex].name} skipped Investment Bank to keep cash reserve.`
+      )
+      await wait(1500)
+      setAiChoiceSkipBusiness(false)
+      setInvestmentOffer(null)
+      setPhase('ready')
       return
     }
 
+    setSelectedInvestmentTile(choice.tileId)
+    setPhase('investment-card-choice')
+    setAiChoiceCardId(choice.card.id)
+    setAiChoiceSkipBusiness(false)
+
+    await wait(1500)
+
+    setAiChoiceCardId(null)
+    setSelectedInvestmentTile(null)
+    setPhase('ready')
+
     const result = purchaseBusinessCardForPlayer(playerIndex, choice.card, choice.tileId)
     const investmentMessage = result.success
-      ? `Investment Bank AI choice: ${result.message}`
-      : `${players[playerIndex].name} skipped Investment Bank. ${result.message}`
+      ? (selectedLanguage === 'th'
+        ? `ธนาคารเพื่อการลงทุน (AI): ${result.message}`
+        : `Investment Bank AI choice: ${result.message}`)
+      : (selectedLanguage === 'th'
+        ? `${players[playerIndex].name} ข้ามธนาคารเพื่อการลงทุน. ${result.message}`
+        : `${players[playerIndex].name} skipped Investment Bank. ${result.message}`)
     setStatus(investmentMessage)
     if (result.success) {
       addTurnLog('business', investmentMessage)
-      await flashAiFocus(choice.tileId, `${players[playerIndex].name} invested here`, runId)
+      await flashAiFocus(choice.tileId, selectedLanguage === 'th' ? `${players[playerIndex].name} ลงทุนที่นี่` : `${players[playerIndex].name} invested here`, runId)
     }
     await wait(aiDelayMs)
 
@@ -2175,12 +2238,12 @@ function App() {
   const selectedLandRentRuleText = selectedLandTileData?.landPrice
     ? `${Math.round(landRentRate * 100)}% of land price = ${formatMoney(selectedLandRentDue)}`
     : 'No rent rule on this tile'
-  const businessCards = getBusinessCardsForTile(activeTile)
+  const businessCards = getBusinessCardsForTile(activeTile, selectedLanguage ?? 'en')
   const businessesOnActiveTile = businesses.filter((business) => business.tileId === activeTile.id)
   const selectedInvestmentTileData =
     selectedInvestmentTile === null ? null : boardTiles[selectedInvestmentTile]
   const investmentBusinessCards = selectedInvestmentTileData
-    ? getBusinessCardsForTile(selectedInvestmentTileData)
+    ? getBusinessCardsForTile(selectedInvestmentTileData, selectedLanguage ?? 'en')
     : []
   const businessesOnInvestmentTile =
     selectedInvestmentTile === null
@@ -2832,7 +2895,7 @@ function App() {
 
                   return (
                     <button
-                      className="action-card"
+                      className={`action-card${aiChoiceCardId === card.id ? ` ai-highlight-choice ai-highlight-p${currentPlayerIndex} ai-highlight-fast` : ''}`}
                       disabled={!canAfford || isMaxLevel || isOwnedByRival}
                       key={card.id}
                       type="button"
@@ -2866,7 +2929,7 @@ function App() {
                 })}
               </div>
               <button
-                className="skip-card"
+                className={`skip-card${aiChoiceSkipBusiness ? ` ai-highlight-skip ai-highlight-p${currentPlayerIndex} ai-highlight-fast` : ''}`}
                 type="button"
                 onClick={() => resolveCardChoice('Skipped card choice.')}
               >
@@ -2897,7 +2960,7 @@ function App() {
                   ))}
                 </div>
                 <button
-                  className="skip-investment"
+                  className={`skip-investment${aiChoiceSkipBusiness ? ` ai-highlight-skip ai-highlight-p${currentPlayerIndex} ai-highlight-fast` : ''}`}
                   type="button"
                   onClick={() => resolveInvestmentChoice('Skipped Investment Bank choice.')}
                 >
@@ -2932,6 +2995,7 @@ function App() {
 
                     return (
                       <button
+                        className={aiChoiceCardId === card.id ? `ai-highlight-choice ai-highlight-p${currentPlayerIndex} ai-highlight-fast` : ''}
                         disabled={!canAfford || isMaxLevel || isOwnedByRival}
                         key={card.id}
                         type="button"
@@ -2969,7 +3033,7 @@ function App() {
                     Back to tile list
                   </button>
                   <button
-                    className="skip-investment"
+                    className={`skip-investment${aiChoiceSkipBusiness ? ` ai-highlight-skip ai-highlight-p${currentPlayerIndex} ai-highlight-fast` : ''}`}
                     type="button"
                     onClick={() =>
                       resolveInvestmentChoice(
@@ -3144,6 +3208,7 @@ function App() {
                 )}
                 <div className="land-buy-actions">
                   <button
+                    className={aiChoiceCardId === 'buy-land' ? `ai-highlight-choice ai-highlight-p${currentPlayerIndex} ai-highlight-fast` : ''}
                     disabled={
                       !selectedLandTileData?.landPrice ||
                       Boolean(selectedLandHolding) ||

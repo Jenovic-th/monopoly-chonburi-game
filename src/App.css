@@ -589,24 +589,72 @@ button {
 }
 
 .dev-tools {
+  position: fixed;
+  bottom: 12px;
+  left: 18px;
+  z-index: 100;
+  width: min(340px, calc(100vw - 36px));
   display: grid;
-  gap: 8px;
+  gap: 10px;
+  padding: 14px;
+  border: 1px solid rgba(24, 34, 42, 0.22);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 12px 36px rgba(23, 32, 38, 0.2);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  /* Premium animation entrance */
+  animation: dev-widget-fade-in 0.3s cubic-bezier(0.25, 0.8, 0.25, 1) forwards;
+}
+
+@keyframes dev-widget-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(15px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.dev-tools-header {
+  display: flex;
+  justify-content: flex-start;
+  align-items: center;
+  gap: 6px;
+  border-bottom: 1px solid rgba(24, 34, 42, 0.12);
+  padding-bottom: 6px;
+  margin-bottom: 2px;
+}
+
+.dev-tools-header strong {
+  color: #7d6510;
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.5px;
+}
+
+.dev-tools-header span {
+  color: #6a7c88;
+  font-size: 10px;
+  font-weight: 700;
 }
 
 .test-move-panel,
 .dev-cash-panel {
   display: grid;
-  gap: 6px;
-  padding: 8px;
-  border: 1px solid rgba(29, 39, 46, 0.18);
-  border-radius: 7px;
-  background: rgba(255, 255, 255, 0.5);
+  gap: 5px;
+  padding: 6px 8px;
+  border: 1px solid rgba(29, 39, 46, 0.12);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.35);
 }
 
 .test-move-panel > span,
 .dev-cash-panel > span {
-  color: #5b6870;
-  font-size: 11px;
+  color: #4a5760;
+  font-size: 10px;
   font-weight: 900;
   text-transform: uppercase;
 }
@@ -614,7 +662,7 @@ button {
 .test-move-panel > div,
 .dev-cash-panel > div {
   display: grid;
-  gap: 4px;
+  gap: 3px;
 }
 
 .test-move-panel > div {
@@ -627,13 +675,13 @@ button {
 
 .test-move-panel button,
 .dev-cash-panel button {
-  min-height: 28px;
+  min-height: 24px;
   padding: 0;
-  border: 1px solid rgba(29, 39, 46, 0.28);
+  border: 1px solid rgba(29, 39, 46, 0.22);
   background: #ffffff;
   color: #172027;
-  font-size: 12px;
-  box-shadow: 0 2px 0 rgba(29, 39, 46, 0.3);
+  font-size: 11px;
+  box-shadow: 0 1px 0 rgba(29, 39, 46, 0.2);
 }
 
 .dev-cash-panel button {
@@ -2412,3 +2460,213 @@ button {
     overflow: visible;
   }
 }
+
+/* AI Highlights and Glowing Gold Animations */
+@keyframes ai-select-sequence {
+  /* Rapid blinking phase (0% to 55% of the total duration) */
+  0%, 14%, 28%, 42%, 54% {
+    box-shadow: 0 0 4px var(--highlight-color, #ffd700), 0 4px 0 var(--highlight-color, #ffd700);
+    border-color: var(--highlight-color, #ffd700) !important;
+    background-color: var(--highlight-bg-soft, rgba(255, 215, 0, 0.05)) !important;
+  }
+  7%, 21%, 35%, 48% {
+    box-shadow: 0 0 20px var(--highlight-color, #ffd700), 0 4px 0 var(--highlight-color, #ffd700);
+    border-color: var(--highlight-color-dark, #b8860b) !important;
+    background-color: var(--highlight-bg-glow, rgba(255, 215, 0, 0.22)) !important;
+    transform: translateY(-2px) scale(1.02);
+  }
+  
+  /* Clicking press-down moment (55% to 65%) */
+  56%, 64% {
+    transform: translateY(2px) scale(0.97);
+    box-shadow: 0 0 10px var(--highlight-color, #ffd700), 0 1px 0 var(--highlight-color, #ffd700);
+    border-color: var(--highlight-color, #ffd700) !important;
+  }
+  
+  /* Solid glowing selected phase (65% to 100%) */
+  65%, 100% {
+    transform: translateY(-2px) scale(1.03);
+    box-shadow: 0 0 25px var(--highlight-color, #ffd700), 0 4px 0 var(--highlight-color, #ffd700);
+    border-color: var(--highlight-color, #ffd700) !important;
+    background-color: var(--highlight-bg-selected, #fff9ea) !important;
+  }
+}
+
+@keyframes ai-skip-sequence {
+  /* Rapid blinking phase (0% to 55%) */
+  0%, 14%, 28%, 42%, 54% {
+    box-shadow: 0 0 3px var(--highlight-color, #ffd700);
+    border-color: var(--highlight-color, #ffd700) !important;
+    background-color: rgba(255, 255, 255, 0.5) !important;
+  }
+  7%, 21%, 35%, 48% {
+    box-shadow: 0 0 14px var(--highlight-color, #ffd700);
+    border-color: var(--highlight-color-dark, #b8860b) !important;
+    background-color: var(--highlight-bg-selected, #fffdf5) !important;
+  }
+  
+  /* Clicking press-down moment (55% to 65%) */
+  56%, 64% {
+    transform: translateY(1px) scale(0.97);
+    box-shadow: 0 0 8px var(--highlight-color, #ffd700);
+    border-color: var(--highlight-color, #ffd700) !important;
+    background-color: var(--highlight-bg-selected, #fffdf5) !important;
+  }
+  
+  /* Solid glowing selected phase (65% to 100%) */
+  65%, 100% {
+    transform: translateY(-1px) scale(1.01);
+    box-shadow: 0 0 20px var(--highlight-color, #ffd700);
+    border-color: var(--highlight-color, #ffd700) !important;
+    background-color: var(--highlight-bg-selected, #fffdf5) !important;
+  }
+}
+
+/* Default Gold values */
+.ai-highlight-choice {
+  --highlight-color: #ffd700;
+  --highlight-color-dark: #b8860b;
+  --highlight-bg-soft: rgba(255, 215, 0, 0.05);
+  --highlight-bg-glow: rgba(255, 215, 0, 0.22);
+  --highlight-bg-selected: #fff9ea;
+  
+  animation: ai-select-sequence 2.2s cubic-bezier(0.25, 0.8, 0.25, 1) forwards !important;
+  border: 3px solid var(--highlight-color) !important;
+  z-index: 5;
+}
+
+.ai-highlight-skip {
+  --highlight-color: #ffd700;
+  --highlight-color-dark: #b8860b;
+  --highlight-bg-selected: #fffdf5;
+
+  animation: ai-skip-sequence 2.2s cubic-bezier(0.25, 0.8, 0.25, 1) forwards !important;
+  border: 2px dashed var(--highlight-color) !important;
+  font-weight: 900;
+}
+
+/* Player Specific Spectator Colors */
+.ai-highlight-p0 {
+  /* Blue Player */
+  --highlight-color: #2563eb;
+  --highlight-color-dark: #1d4ed8;
+  --highlight-bg-soft: rgba(37, 99, 235, 0.05);
+  --highlight-bg-glow: rgba(37, 99, 235, 0.22);
+  --highlight-bg-selected: #eff6ff;
+}
+
+.ai-highlight-p1 {
+  /* Red Player (AI 1) */
+  --highlight-color: #dc2626;
+  --highlight-color-dark: #b91c1c;
+  --highlight-bg-soft: rgba(220, 38, 38, 0.05);
+  --highlight-bg-glow: rgba(220, 38, 38, 0.22);
+  --highlight-bg-selected: #fef2f2;
+}
+
+.ai-highlight-p2 {
+  /* Green Player (AI 2) */
+  --highlight-color: #16a34a;
+  --highlight-color-dark: #15803d;
+  --highlight-bg-soft: rgba(22, 163, 74, 0.05);
+  --highlight-bg-glow: rgba(22, 163, 74, 0.22);
+  --highlight-bg-selected: #f0fdf4;
+}
+
+.ai-highlight-choice.ai-highlight-fast {
+  animation-duration: 1.5s !important;
+}
+
+.ai-highlight-choice.ai-highlight-slow {
+  animation-duration: 2.5s !important;
+}
+
+.ai-highlight-skip.ai-highlight-fast {
+  animation-duration: 1.5s !important;
+}
+
+.ai-highlight-skip.ai-highlight-slow {
+  animation-duration: 2.5s !important;
+}
+
+/* Override browser default disabled styles to make highlighted AI cards fully vivid */
+.ai-highlight-choice:disabled,
+.ai-highlight-skip:disabled {
+  opacity: 1 !important;
+  cursor: default !important;
+}
+
+.action-card.ai-highlight-choice:disabled {
+  color: #19232b !important;
+}
+
+.investment-plans button.ai-highlight-choice:disabled {
+  color: #1c3216 !important;
+}
+
+.skip-card.ai-highlight-skip:disabled,
+.skip-investment.ai-highlight-skip:disabled,
+.land-skip.ai-highlight-skip:disabled {
+  color: var(--highlight-color-dark) !important;
+}
+
+.political-event-choice button.ai-highlight-choice:disabled {
+  color: #ffffff !important;
+  border: 2px solid var(--highlight-color) !important;
+}
+
+.land-buy-actions button.ai-highlight-choice:disabled {
+  color: #ffffff !important;
+  border: 2px solid #ffd700 !important;
+}
+
+/* Console Widgets Row - Compact 3-Column Dashboard */
+.console-widgets-row {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+  width: 100%;
+  margin-top: 4px;
+}
+
+.console-widgets-row button,
+.console-widgets-row div {
+  min-height: 42px !important;
+  max-height: 46px !important;
+  padding: 4px 6px !important;
+  border-radius: 6px !important;
+  display: flex !important;
+  flex-direction: column !important;
+  justify-content: center !important;
+  align-items: center !important;
+  text-align: center !important;
+  gap: 1px !important;
+  box-shadow: none !important;
+  box-sizing: border-box !important;
+}
+
+.console-widgets-row span {
+  font-size: 8px !important;
+  font-weight: 850 !important;
+  margin: 0 !important;
+  line-height: 1.15 !important;
+  text-transform: uppercase !important;
+}
+
+.console-widgets-row strong {
+  font-size: clamp(10px, 1.2vmin, 13px) !important;
+  font-weight: 900 !important;
+  line-height: 1.1 !important;
+  text-align: center !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  width: 100% !important;
+}
+
+.console-widgets-row em {
+  display: none !important; /* Hide extra description lines in compact widgets */
+}
+
+
+

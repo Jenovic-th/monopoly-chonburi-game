@@ -4,6 +4,25 @@
 
 ### Added
 
+- Implemented Player-Specific Spectator Highlights (Festival Mode):
+  - Modified `@keyframes ai-select-sequence` and `@keyframes ai-skip-sequence` in `src/App.css` to use CSS custom properties for dynamic color values.
+  - Defined specific color variables for Player 0 (Blue), AI 1 (Red), and AI 2 (Green) using classes `.ai-highlight-p0`, `.ai-highlight-p1`, and `.ai-highlight-p2`.
+  - Dynamically bound `ai-highlight-p${currentPlayerIndex}` to all buttons in JSX spectator modals inside `src/App.tsx`.
+  - Spectator overlays now glow in the active player's primary identity color (Blue, Red, or Green) when making business, land, or investment choice buyouts/skips.
+- Implemented Bilingual Stalls/Businesses Theme by Zone:
+  - Added full dynamic Thai translations for all 12 business categories across three tiers (small, medium, large) to match the Chonburi/Pattaya local theme (e.g. souvenir kiosks for landmarks, beach cafe for beaches, worker food stalls for industrial zones).
+  - Translated all tier descriptions into Thai and connected the `language` argument through `getBusinessCardsForTile`.
+  - Stalls and businesses now show 100% beautiful Thai titles and descriptions when playing in Thai, and smooth English fallback when playing in English.
+- Restored AI Spectator Mode popups for business card/stall choices:
+  - When AI is choosing or upgrading a business, the card choice phase modal is shown.
+  - Highlights chosen cards with a solid gold border (`ai-highlight-choice`) and skipped choices with a dashed gold border (`ai-highlight-skip`) for 1.5 seconds.
+  - Automatically processes the choice and closes the popup to transition smoothly.
+- Implemented Dynamic Land Buyout Popup for AI:
+  - Big land buyout popup (`land-choice` phase) remains completely manual for human players and does not auto-open on landing.
+  - If the AI lands on a land tile and decides to buy it, the popup automatically opens and highlights the "Buy Land" button in gold for 1.5 seconds, then closes and processes the purchase.
+  - If the AI decides to skip buying, it skips silently without any intrusive popups.
+- Successfully verified that all TypeScript compilations (`npm run build`) and ESLint checks (`npm run lint`) pass with zero errors.
+
 - Added `HANDOFF.md` for working across computers or with another AI assistant:
   - includes setup commands,
   - latest GitHub commit,
