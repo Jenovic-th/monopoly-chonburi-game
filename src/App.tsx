@@ -517,6 +517,9 @@ function App() {
   const [aiFocusTile, setAiFocusTile] = useState<number | null>(null)
   const [aiFocusLabel, setAiFocusLabel] = useState<string | null>(null)
   const [selectedLanguage, setSelectedLanguage] = useState<Language | null>(null)
+  const t = (en: string, th: string): string => {
+    return selectedLanguage === 'th' ? th : en
+  }
   const [aiChoiceCardId, setAiChoiceCardId] = useState<string | null>(null)
   const [aiChoiceSkipBusiness, setAiChoiceSkipBusiness] = useState(false)
 
@@ -928,6 +931,7 @@ function App() {
       updatePositions(nextPositions)
     }
 
+    const wasSkipped = skipRequestedRef.current
     skipRequestedRef.current = false
     const payout = payStartIncome(playerIndex, countStartPasses(startPosition, steps))
 
@@ -944,6 +948,11 @@ function App() {
     } else {
       setStatus(`${players[playerIndex].name} stopped at ${boardTiles[finalPosition].name}.`)
     }
+
+    if (!wasSkipped) {
+      await wait(1800) // Premium linger pause so players can clearly see where they stopped!
+    }
+
     return finalPosition
   }
 
@@ -1150,13 +1159,23 @@ function App() {
     nextCoupons[playerIndex] = true
     updatePrisonContactCoupons(nextCoupons)
 
+    const player = players[playerIndex]
     const prisonBazaarMessage = alreadyHasCoupon
-      ? `${players[playerIndex].name} visited Chonburi Prison Bazaar and already has a Prison Contact Coupon.`
-      : `${players[playerIndex].name} received a Prison Contact Coupon: ${Math.round(prisonContactDiscountRate * 100)}% off the next influence card purchase.`
+      ? (selectedLanguage === 'th'
+        ? `${player.name} ได้เข้าเยี่ยมชมเรือนจำชลบุรี แต่พวกเขามีคูปองลดโทษคุกอยู่แล้ว`
+        : `${player.name} visited Chonburi Prison Bazaar and already has a Prison Contact Coupon.`)
+      : (selectedLanguage === 'th'
+        ? `${player.name} ได้เข้าเยี่ยมชมเรือนจำชลบุรี และได้รับคูปองลดโทษคุกลดค่าอิทธิพล ${Math.round(prisonContactDiscountRate * 100)}%`
+        : `${player.name} received a Prison Contact Coupon: ${Math.round(prisonContactDiscountRate * 100)}% off the next influence card purchase.`)
+
     setStatus(prisonBazaarMessage)
     addTurnLog('event', prisonBazaarMessage)
 
-    await wait(aiDelayMs)
+    if (player.role === 'AI') {
+      await wait(1800) // Linger pause for 1.8 seconds so players can clearly read that AI stopped at Prison!
+    } else {
+      await wait(aiDelayMs)
+    }
 
     if (runId !== runIdRef.current) {
       return
@@ -1167,7 +1186,9 @@ function App() {
     if (event.cashBonus) {
       const nextCash = cashRef.current.map((playerCash) => playerCash + event.cashBonus!)
       updateCash(nextCash)
-      return `Every player received ${formatMoney(event.cashBonus)}.`
+      return selectedLanguage === 'th'
+        ? `ผู้เล่นทุกคนได้รับเงินสดจำนวน ${formatMoney(event.cashBonus)}`
+        : `Every player received ${formatMoney(event.cashBonus)}.`
     }
 
     if (event.jackpotClaim) {
@@ -1178,14 +1199,18 @@ function App() {
       updatePrisonJackpot(0)
 
       if (prize <= 0) {
-        return `${players[playerIndex].name} drew the lottery, but the Prison Jackpot is empty.`
+        return selectedLanguage === 'th'
+          ? `${players[playerIndex].name} จับรางวัลได้ แต่เงินกองกลางคุกว่างเปล่า`
+          : `${players[playerIndex].name} drew the lottery, but the Prison Jackpot is empty.`
       }
 
-      return `${players[playerIndex].name} claimed the Prison Jackpot: ${formatMoney(prize)}.`
+      return selectedLanguage === 'th'
+        ? `${players[playerIndex].name} ได้รับรางวัลเงินกองกลางคุก: ${formatMoney(prize)}`
+        : `${players[playerIndex].name} claimed the Prison Jackpot: ${formatMoney(prize)}.`
     }
 
     if (!event.incomeModifier) {
-      return 'No effect.'
+      return t("No effect.", "ไม่มีผลกระทบ")
     }
 
     const nextModifiers = incomeModifiersRef.current.filter(
@@ -1207,7 +1232,9 @@ function App() {
       })),
     ])
 
-    return 'Effect applies to each player once, on their next business income collection.'
+    return selectedLanguage === 'th'
+      ? 'เอฟเฟกต์จะมีผลกับผู้เล่นทุกคนหนึ่งครั้งในการรับรายได้รอบถัดไป'
+      : 'Effect applies to each player once, on their next business income collection.'
   }
 
   function resolvePoliticalEvent(message: string) {
@@ -1224,7 +1251,11 @@ function App() {
 
     if (player.role === 'AI') {
       setStatus(eventMessage)
-      await wait(aiDelayMs)
+      setSelectedPoliticalEvent(event)
+      setPhase('political-event')
+      await wait(1800) // Keep the beautiful political event popup lingering for 1.8s!
+      setSelectedPoliticalEvent(null)
+      setPhase('ready')
       return
     }
 
@@ -1247,8 +1278,12 @@ function App() {
     const player = players[playerIndex]
 
     if (player.role === 'AI') {
-      setStatus(`${player.name} reached Local Power Broker. AI skips influence cards for now.`)
-      await wait(aiDelayMs)
+      setStatus(
+        selectedLanguage === 'th'
+          ? `${player.name} เดินทางถึงจุดนายหน้าอิทธิพลท้องถิ่น (AI ข้ามการซื้อการ์ดอิทธิพล)`
+          : `${player.name} reached Local Power Broker. AI skips influence cards for now.`
+      )
+      await wait(1800) // Linger pause for 1.8 seconds so players can clearly see where AI stopped!
       return
     }
 
@@ -2302,54 +2337,6 @@ function App() {
     (total, business) => total + getBusinessHoldingIncome(business),
     0,
   )
-  const selectedPlayerIncomeModifiersForPreview = incomeModifiers.filter(
-    (modifier) => modifier.playerIndex === selectedPlayerIndex,
-  )
-  const selectedPlayerBusinessIncomesAtBank = selectedPlayerBusinesses.map((business) => {
-    const baseIncome = getBusinessHoldingIncome(business)
-    const modifiedIncome = selectedPlayerIncomeModifiersForPreview
-      .filter((modifier) => isBusinessInScope(business, modifier.scope))
-      .reduce((income, modifier) => Math.round(income * modifier.multiplier), baseIncome)
-
-    return {
-      business,
-      income: modifiedIncome,
-    }
-  })
-  const selectedPlayerBusinessIncomeAtBank = selectedPlayerBusinessIncomesAtBank.reduce(
-    (total, item) => total + item.income,
-    0,
-  )
-  const selectedPlayerEducationBonusRate =
-    selectedPlayer.role === 'Human' && education.stage === 'masterCompleted'
-      ? educationIncomeBonus.masterCompleted / 100
-      : selectedPlayer.role === 'Human' && education.stage === 'bachelorCompleted'
-        ? educationIncomeBonus.bachelorCompleted / 100
-        : 0
-  const selectedPlayerEducationBonusAtBank = Math.round(
-    selectedPlayerBusinessIncomeAtBank * selectedPlayerEducationBonusRate,
-  )
-  const selectedPlayerLeaseShareTotalAtBank = selectedPlayerBusinessIncomesAtBank.reduce(
-    (total, item) => {
-      const landHolding = landHoldings.find((holding) => holding.tileId === item.business.tileId)
-
-      if (!landHolding || landHolding.playerIndex === selectedPlayerIndex) {
-        return total
-      }
-
-      const rate = leasePressurePlayers[landHolding.playerIndex]
-        ? openLeaseShareRate * 2
-        : openLeaseShareRate
-
-      return total + Math.round(item.income * rate)
-    },
-    0,
-  )
-  const selectedPlayerEstimatedBankIncome =
-    passStartIncome +
-    selectedPlayerBusinessIncomeAtBank +
-    selectedPlayerEducationBonusAtBank -
-    selectedPlayerLeaseShareTotalAtBank
   const selectedPrisonStatus =
     prisonTurns[selectedPlayerIndex] > 0
       ? `In prison: ${prisonTurns[selectedPlayerIndex]} skipped turns left`
@@ -2446,7 +2433,7 @@ function App() {
         type="button"
         onClick={() => setIsLedgerVisible((value) => !value)}
       >
-        {isLedgerVisible ? 'Hide Info' : 'Show Info'}
+        {isLedgerVisible ? t("Hide Info", "ซ่อนข้อมูล") : t("Show Info", "แสดงข้อมูล")}
       </button>
 
       <div className={`game-layout ${isLedgerVisible ? '' : 'ledger-collapsed'}`}>
@@ -2489,7 +2476,9 @@ function App() {
               >
                 {isAiFocused && aiFocusLabel && <span className="ai-focus-label">{aiFocusLabel}</span>}
                 <span className="tile-number">{tile.toString().padStart(2, '0')}</span>
-                <span className="tile-name">{tileData.name}</span>
+                <span className="tile-name">
+                  {selectedLanguage === 'th' ? tileData.nameTh : tileData.name}
+                </span>
                 {tileData.landPrice && (
                   <span className="land-price">{formatCompactMoney(tileData.landPrice)}</span>
                 )}
@@ -2498,7 +2487,7 @@ function App() {
                     className={`land-owner ${players[landHolding.playerIndex].colorClass}`}
                     title={`Land owner: ${players[landHolding.playerIndex].name}`}
                   >
-                    Owner {players[landHolding.playerIndex].name}
+                    {t("Owner ", "เจ้าของ ")}{players[landHolding.playerIndex].name}
                   </span>
                 )}
                 {tileBusinessMarkers.length > 0 && (
@@ -2536,107 +2525,147 @@ function App() {
             )
           })}
           <div className="turn-console">
-          <div>
-            <p className="eyebrow">{text.demoLabel}</p>
-            <h1>{text.appTitle}</h1>
-          </div>
+            {phase === 'moving' ? (
+              <div className="moving-focus-card">
+                <span className="eyebrow moving-focus-eyebrow">
+                  {t("Active Movement", "กำลังเดินทาง...")}
+                </span>
 
-          <div className="turn-display">
-            <span>{text.turn}</span>
-            <strong>{players[currentPlayerIndex].name}</strong>
-          </div>
-
-          <div className="dice-row" aria-label="Latest dice roll">
-            <div className="die">{latestRoll?.die1 ?? '-'}</div>
-            <div className="die">{latestRoll?.die2 ?? '-'}</div>
-            <div className="total">{text.total} {latestRoll?.total ?? '-'}</div>
-          </div>
-
-          <button
-            className="primary-action"
-            type="button"
-            disabled={
-              phase === 'card-choice' ||
-              phase === 'education-choice' ||
-              phase === 'study-skip' ||
-              phase === 'prison-skip' ||
-              phase === 'investment-choice' ||
-              phase === 'investment-card-choice' ||
-              phase === 'political-event' ||
-              phase === 'land-choice' ||
-              phase === 'influence-choice'
-            }
-            onClick={handlePrimaryAction}
-          >
-            {primaryButtonText}
-          </button>
-
-          <div className="console-actions">
-            <button className="secondary-action" type="button" onClick={resetGame}>
-              {text.reset}
-            </button>
-            <button className="secondary-action" type="button" onClick={() => setIsDevMode((value) => !value)}>
-              {isDevMode ? text.devOn : text.devMode}
-            </button>
-          </div>
-
-          {isDevMode && (
-            <div className="dev-tools">
-              <div className="test-move-panel" aria-label="Prototype test move controls">
-                <span>Test Move</span>
-                <div>
-                  {testMoveOptions.map((steps) => (
-                    <button
-                      disabled={phase !== 'ready'}
-                      key={steps}
-                      type="button"
-                      onClick={() => handleTestMove(steps)}
-                    >
-                      {steps}
-                    </button>
-                  ))}
+                <div className="moving-tile-preview-container" key={positions[currentPlayerIndex]}>
+                  <div className={`moving-tile-preview moving-tile-${boardTiles[positions[currentPlayerIndex]].category}`}>
+                    <span className="moving-tile-number">
+                      {positions[currentPlayerIndex].toString().padStart(2, '0')}
+                    </span>
+                    <div className="moving-tile-details">
+                      <strong className="moving-tile-name">
+                        {selectedLanguage === 'th'
+                          ? boardTiles[positions[currentPlayerIndex]].nameTh
+                          : boardTiles[positions[currentPlayerIndex]].name}
+                      </strong>
+                      <span className="moving-tile-zone">
+                        {selectedLanguage === 'th' && boardTiles[positions[currentPlayerIndex]].zoneTh
+                          ? boardTiles[positions[currentPlayerIndex]].zoneTh
+                          : boardTiles[positions[currentPlayerIndex]].zone || t("Special Space", "ช่องพิเศษ")}
+                      </span>
+                    </div>
+                  </div>
                 </div>
-              </div>
 
-              <div className="dev-cash-panel" aria-label="Prototype cash controls">
-                <span>Dev Cash</span>
+                <p className="moving-tile-description-zoom">
+                  {selectedLanguage === 'th'
+                    ? boardTiles[positions[currentPlayerIndex]].descriptionTh
+                    : boardTiles[positions[currentPlayerIndex]].description}
+                </p>
+              </div>
+            ) : (
+              <>
                 <div>
-                  {devCashOptions.map((amount) => (
-                    <button key={amount} type="button" onClick={() => addDevCashToPlayer(amount)}>
-                      +{amount >= 1000000 ? '1M' : `${amount / 1000}K`}
-                    </button>
-                  ))}
-                  <button type="button" onClick={() => addDevCashToAll(devAllCashAmount)}>
-                    All +500K
+                  <p className="eyebrow">{text.demoLabel}</p>
+                  <h1>{text.appTitle}</h1>
+                </div>
+
+                <div className="turn-display">
+                  <span>{text.turn}</span>
+                  <strong>{players[currentPlayerIndex].name}</strong>
+                </div>
+
+                <div className="dice-row" aria-label="Latest dice roll">
+                  <div className="die">{latestRoll?.die1 ?? '-'}</div>
+                  <div className="die">{latestRoll?.die2 ?? '-'}</div>
+                  <div className="total">{text.total} {latestRoll?.total ?? '-'}</div>
+                </div>
+
+                <button
+                  className="primary-action"
+                  type="button"
+                  disabled={
+                    phase === 'card-choice' ||
+                    phase === 'education-choice' ||
+                    phase === 'study-skip' ||
+                    phase === 'prison-skip' ||
+                    phase === 'investment-choice' ||
+                    phase === 'investment-card-choice' ||
+                    phase === 'political-event' ||
+                    phase === 'land-choice' ||
+                    phase === 'influence-choice'
+                  }
+                  onClick={handlePrimaryAction}
+                >
+                  {primaryButtonText}
+                </button>
+
+                <div className="console-actions">
+                  <button className="secondary-action" type="button" onClick={resetGame}>
+                    {text.reset}
+                  </button>
+                  <button className="secondary-action" type="button" onClick={() => setIsDevMode((value) => !value)}>
+                    {isDevMode ? text.devOn : text.devMode}
                   </button>
                 </div>
-              </div>
-            </div>
-          )}
 
-          <p className="status-text">{status}</p>
+                {isDevMode && (
+                  <div className="dev-tools">
+                    <div className="dev-tools-header">
+                      <strong>{t("Developer Tools", "เครื่องมือพัฒนา")}</strong>
+                      <button className="dev-close-btn" type="button" onClick={() => setIsDevMode(false)}>✕</button>
+                    </div>
 
-          <div className="jackpot-summary" aria-label={text.prisonJackpot}>
-            <span>{text.prisonJackpot}</span>
-            <strong>{formatMoney(prisonJackpot)}</strong>
-          </div>
+                    <div className="test-move-panel" aria-label="Prototype test move controls">
+                      <span>{t("Test Move", "ทดสอบเดินหมาก")}</span>
+                      <div>
+                        {testMoveOptions.map((steps) => (
+                          <button
+                            disabled={phase !== 'ready'}
+                            key={steps}
+                            type="button"
+                            onClick={() => handleTestMove(steps)}
+                          >
+                            {steps}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
 
-          <button className="net-worth-button" type="button" onClick={() => setIsNetWorthOpen(true)}>
-            <span>{text.netWorth}</span>
-            <strong>{players[netWorthRows[0].playerIndex].name}</strong>
-            <em>{formatMoney(netWorthRows[0].total)}</em>
-          </button>
+                    <div className="dev-cash-panel" aria-label="Prototype cash controls">
+                      <span>{t("Dev Cash", "เพิ่มเงินทดสอบ")}</span>
+                      <div>
+                        {devCashOptions.map((amount) => (
+                          <button key={amount} type="button" onClick={() => addDevCashToPlayer(amount)}>
+                            +{amount >= 1000000 ? '1M' : `${amount / 1000}K`}
+                          </button>
+                        ))}
+                        <button type="button" onClick={() => addDevCashToAll(devAllCashAmount)}>
+                          {t("All +500K", "ทุกคน +500K")}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
 
-          <button className="turn-log-button" type="button" onClick={() => setIsTurnLogOpen(true)}>
-            <span>{text.turnLog}</span>
-            <strong>{turnLog[0]?.message ?? text.noEvents}</strong>
-          </button>
+                <p className="status-text">{status}</p>
 
-          <div className="compact-tile-summary" aria-label="Current tile summary">
-            <span>{activeTile.id.toString().padStart(2, '0')}</span>
-            <strong>{activeTile.name}</strong>
-          </div>
+                <div className="jackpot-summary" aria-label={text.prisonJackpot}>
+                  <span>{text.prisonJackpot}</span>
+                  <strong>{formatMoney(prisonJackpot)}</strong>
+                </div>
 
+                <button className="net-worth-button" type="button" onClick={() => setIsNetWorthOpen(true)}>
+                  <span>{text.netWorth}</span>
+                  <strong>{players[netWorthRows[0].playerIndex].name}</strong>
+                  <em>{formatMoney(netWorthRows[0].total)}</em>
+                </button>
+
+                <button className="turn-log-button" type="button" onClick={() => setIsTurnLogOpen(true)}>
+                  <span>{text.turnLog}</span>
+                  <strong>{turnLog[0]?.message ?? text.noEvents}</strong>
+                </button>
+
+                <div className="compact-tile-summary" aria-label="Current tile summary">
+                  <span>{activeTile.id.toString().padStart(2, '0')}</span>
+                  <strong>{activeTile.name}</strong>
+                </div>
+              </>
+            )}
           </div>
         </section>
 
@@ -2668,52 +2697,29 @@ function App() {
             <div className="player-card-header">
               <span className={`token ledger-token ${selectedPlayer.shape} ${selectedPlayer.colorClass}`} />
               <div>
-                <span>{selectedPlayer.role}</span>
+                <span>{selectedPlayer.role === 'Human' ? t('Player', 'ผู้เล่น') : 'AI'}</span>
                 <strong>{selectedPlayer.name}</strong>
               </div>
-            </div>
-
-            <div className="ledger-stats">
-              <div>
-                <span>Cash</span>
-                <strong>{formatMoney(cash[selectedPlayerIndex])}</strong>
-              </div>
-              <div>
-                <span>Business income</span>
-                <strong>{formatMoney(selectedPlayerIncome)}</strong>
-              </div>
-            </div>
-
-            <div className="ledger-section">
-              <span>Education</span>
-              <strong>{selectedEducationStatus}</strong>
-            </div>
-
-            <div className="ledger-section income-breakdown">
-              <span>Estimated Tile 00 Income</span>
-              <strong>{formatMoney(selectedPlayerEstimatedBankIncome)}</strong>
-              <div>
-                <span>Base</span>
-                <em>{formatMoney(passStartIncome)}</em>
-              </div>
-              <div>
-                <span>Business</span>
-                <em>{formatMoney(selectedPlayerBusinessIncomeAtBank)}</em>
-              </div>
-              <div>
-                <span>Education bonus</span>
-                <em>+{formatMoney(selectedPlayerEducationBonusAtBank)}</em>
-              </div>
-              <div>
-                <span>Open Lease paid</span>
-                <em>-{formatMoney(selectedPlayerLeaseShareTotalAtBank)}</em>
-              </div>
+              <dl className="player-quick-stats">
+                <div>
+                  <dt>{t("Cash", "เงินสด")}</dt>
+                  <dd>{formatMoney(cash[selectedPlayerIndex])}</dd>
+                </div>
+                <div>
+                  <dt>{t("Income", "รายได้")}</dt>
+                  <dd>{formatMoney(selectedPlayerIncome)}</dd>
+                </div>
+                <div className="education-stat">
+                  <dt>{t("Education", "การศึกษา")}</dt>
+                  <dd>{selectedEducationStatus}</dd>
+                </div>
+              </dl>
             </div>
 
             <div className="ledger-section">
-              <span>Next Income Event</span>
+              <span>{t("Next Income Event", "เหตุการณ์รายได้ถัดไป")}</span>
               {selectedPlayerIncomeModifiers.length === 0 && !leasePressurePlayers[selectedPlayerIndex] ? (
-                <p>No active event.</p>
+                <p>{t("No active event.", "ไม่มีเอฟเฟกต์ที่ใช้งาน")}</p>
               ) : (
                 <>
                   {selectedPlayerIncomeModifiers.map((modifier) => (
@@ -2722,7 +2728,7 @@ function App() {
                     </p>
                   ))}
                   {leasePressurePlayers[selectedPlayerIndex] && (
-                    <p>Lease Pressure: next Open Lease collection is 20%</p>
+                    <p>{t("Lease Pressure: next Open Lease collection is 20%", "ภาวะบีบคั้นค่าเช่า: รับค่าเช่าเปิดเช่าครั้งถัดไปเป็น 20%")}</p>
                   )}
                 </>
               )}
@@ -2731,7 +2737,7 @@ function App() {
             <div className="inventory-panel" aria-label={`${selectedPlayer.name} card inventory`}>
               <section className="inventory-section property-inventory-section">
                 <div className="inventory-heading">
-                  <span>Property Cards</span>
+                  <span>{t("Property Cards", "การ์ดอสังหาฯ")}</span>
                   <strong>{selectedPlayerBusinesses.length + selectedPlayerLandHoldings.length}</strong>
                 </div>
                 <div className="mini-card-list property-card-list">
@@ -2746,7 +2752,7 @@ function App() {
                       <span>
                         {boardTiles[business.tileId].id.toString().padStart(2, '0')} | Lv.{business.level}
                       </span>
-                      <em>{formatMoney(getBusinessHoldingIncome(business))} / round</em>
+                      <em>{formatMoney(getBusinessHoldingIncome(business))} {t(" / round", " / รอบ")}</em>
                     </button>
                   ))}
                   {selectedPlayerLandHoldings.map((holding) => (
@@ -2757,12 +2763,12 @@ function App() {
                       onClick={() => setInventoryDetail({ kind: 'land', tileId: holding.tileId })}
                     >
                       <strong>{boardTiles[holding.tileId].name}</strong>
-                      <span>{boardTiles[holding.tileId].id.toString().padStart(2, '0')} | Land</span>
+                      <span>{boardTiles[holding.tileId].id.toString().padStart(2, '0')} | {t("Land", "ที่ดิน")}</span>
                       <em>{formatMoney(holding.pricePaid)}</em>
                     </button>
                   ))}
                   {selectedPlayerBusinesses.length === 0 && selectedPlayerLandHoldings.length === 0 && (
-                    <p className="inventory-empty">No property cards.</p>
+                    <p className="inventory-empty">{t("No property cards.", "ไม่มีการ์ดอสังหาฯ")}</p>
                   )}
                 </div>
               </section>
@@ -2770,7 +2776,7 @@ function App() {
               <div className="lower-inventory-grid">
                 <section className="inventory-section">
                   <div className="inventory-heading">
-                    <span>Influence Cards</span>
+                    <span>{t("Influence Cards", "การ์ดอิทธิพล")}</span>
                     <strong>{selectedPlayerInfluenceCards.length}/{maxInfluenceCards}</strong>
                   </div>
                   <div className="mini-card-list influence-slot-list">
@@ -2783,15 +2789,15 @@ function App() {
                       >
                         <strong>{card.title}</strong>
                         <span>{card.risk}</span>
-                        <em>Paid {formatMoney(card.pricePaid)}</em>
+                        <em>{t("Paid ", "จ่ายแล้ว ")}{formatMoney(card.pricePaid)}</em>
                       </button>
                     ))}
                     {Array.from({
                       length: Math.max(maxInfluenceCards - selectedPlayerInfluenceCards.length, 0),
                     }).map((_, index) => (
                       <div className="mini-card empty-slot" key={`empty-influence-${index}`}>
-                        <strong>Empty slot</strong>
-                        <span>Influence card</span>
+                        <strong>{t("Empty slot", "ช่องว่าง")}</strong>
+                        <span>{t("Influence card", "การ์ดอิทธิพล")}</span>
                       </div>
                     ))}
                   </div>
@@ -2799,7 +2805,7 @@ function App() {
 
                 <section className="inventory-section">
                   <div className="inventory-heading">
-                    <span>Prison Cards</span>
+                    <span>{t("Prison Cards", "การ์ดคุก")}</span>
                     <strong>{prisonContactCoupons[selectedPlayerIndex] ? 1 : 0}</strong>
                   </div>
                   <div className="mini-card-list prison-slot-list">
@@ -2820,15 +2826,15 @@ function App() {
                     >
                       <strong>
                         {prisonContactCoupons[selectedPlayerIndex]
-                          ? 'Prison Coupon'
-                          : 'Prison Status'}
+                          ? t("Prison Coupon", "คูปองลดโทษคุก")
+                          : t("Prison Status", "สถานะคุก")}
                       </strong>
                       <span>
                         {prisonContactCoupons[selectedPlayerIndex]
-                          ? `${Math.round(prisonContactDiscountRate * 100)}% influence discount`
+                          ? selectedLanguage === 'th' ? `ส่วนลดอิทธิพล ${Math.round(prisonContactDiscountRate * 100)}%` : `${Math.round(prisonContactDiscountRate * 100)}% influence discount`
                           : selectedPrisonStatus}
                       </span>
-                      <em>Jackpot {formatMoney(prisonJackpot)}</em>
+                      <em>{t("Jackpot ", "สะสม ")}{formatMoney(prisonJackpot)}</em>
                     </button>
                   </div>
                 </section>
@@ -2869,13 +2875,13 @@ function App() {
               tabIndex={0}
               title="Drag to move this window"
             >
-              <span>Move window</span>
-              <strong>Drag to view the board</strong>
+              <span>{t("Move window", "ย้ายหน้าต่าง")}</span>
+              <strong>{t("Drag to view the board", "ลากเพื่อดูบอร์ด")}</strong>
             </div>
           )}
           {phase === 'card-choice' && (
             <div className="card-choice" aria-label="Action card choices">
-              <span>Choose one business card</span>
+              <span>{t("Choose one business card", "เลือกการ์ดธุรกิจหนึ่งใบ")}</span>
               <div className="action-cards">
                 {businessCards.map((card) => {
                   const existingBusiness = businessesOnActiveTile.find(
