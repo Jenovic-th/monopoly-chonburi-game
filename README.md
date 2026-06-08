@@ -34,6 +34,7 @@ powershell -ExecutionPolicy Bypass -File .\tools\clean-reclone.ps1 -Force
 ```
 
 The old folder is moved to a sibling `_repo_archive` folder before the fresh clone is created.
+If the old folder is locked by an editor, terminal, dev server, or AI workspace, the script creates a timestamped fallback clone next to it instead.
 
 ## Validation
 

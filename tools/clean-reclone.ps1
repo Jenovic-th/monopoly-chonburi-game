@@ -63,7 +63,19 @@ if (Test-Path -LiteralPath $TargetPath) {
   Write-Host "To:   $archivePath"
 
   Set-Location -LiteralPath $targetParent
-  Move-Item -LiteralPath $TargetPath -Destination $archivePath
+  try {
+    Move-Item -LiteralPath $TargetPath -Destination $archivePath
+  } catch {
+    Write-Warning "Could not move the existing clone. It is probably open in an editor, terminal, dev server, or this AI workspace."
+    Write-Warning $_.Exception.Message
+
+    $fallbackTarget = Join-Path $targetParent "$targetName-clean-$timestamp"
+    Write-Warning "Creating the clean clone at a fallback path instead:"
+    Write-Warning $fallbackTarget
+
+    $TargetPath = $fallbackTarget
+    $archivePath = $null
+  }
 } else {
   Write-Step "No existing target folder found"
 }

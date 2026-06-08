@@ -85,6 +85,7 @@ Use `git status`, preserve local work with `git stash push -u`, then recommend a
 
 If Git metadata problems repeat, use the project script instead of patching `.git` file by file.
 The script archives the old clone into a sibling `_repo_archive` folder, then clones a fresh copy from GitHub into the original path.
+If the old clone is locked by an editor, terminal, dev server, or active AI workspace, the script creates a timestamped fallback clean clone next to it.
 
 Run from PowerShell:
 

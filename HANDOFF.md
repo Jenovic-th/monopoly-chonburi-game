@@ -395,6 +395,7 @@ If this existing office clone hits `.git/index` errors again, stop and preserve 
 
 Use this when a machine repeatedly fails on Git operations, has mixed `.git` permissions, or was copied between machines.
 It archives the old clone into `_repo_archive` and creates a fresh clone from GitHub at the original path.
+If the old clone is locked by an editor, terminal, dev server, or active AI workspace, the script creates a timestamped fallback clean clone next to the old folder.
 
 From inside the project:
 
