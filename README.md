@@ -4,6 +4,7 @@ Single-player Chonburi-themed board game prototype built with React, TypeScript,
 
 For current project status, setup steps, gameplay systems, user preferences, and the next development plan, start here:
 
+- [AGENTS.md](./AGENTS.md)
 - [HANDOFF.md](./HANDOFF.md)
 - [DEVLOG.md](./DEVLOG.md)
 - [TODO.md](./TODO.md)
@@ -11,6 +12,8 @@ For current project status, setup steps, gameplay systems, user preferences, and
 ## Quick Start
 
 ```powershell
+git status --short --branch
+git fetch origin
 git pull origin main
 npm.cmd install
 npm.cmd run dev

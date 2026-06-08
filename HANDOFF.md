@@ -1,7 +1,7 @@
 # Monopoly Chonburi Game - Handoff Notes
 
-Last updated: 2026-05-29
-Latest feature commit before this handoff: `bd53bc5 Add language selection and AI focus cues`
+Last updated: 2026-06-08
+Latest synced GitHub commit: `9986d80 feat: symmetrical board layout, centered tokens, bottom business markers, bilingual board updates, cinematic zoom card redesign, and AI special tile dwells`
 Repository: `https://github.com/Jenovic-th/monopoly-chonburi-game`
 
 ## How to Continue on Another Computer
@@ -9,6 +9,8 @@ Repository: `https://github.com/Jenovic-th/monopoly-chonburi-game`
 Use these commands from the folder where the project should live:
 
 ```powershell
+git status --short --branch
+git fetch origin
 git pull origin main
 npm.cmd install
 npm.cmd run dev
@@ -22,6 +24,7 @@ http://localhost:5173/
 
 Before making changes, read these files:
 
+- `AGENTS.md` - mandatory AI/project workflow, cross-machine Git rules, and known Windows Git fix.
 - `HANDOFF.md` - current project map and next work.
 - `DEVLOG.md` - chronological work log.
 - `TODO.md` - done list, next tasks, design questions.
@@ -29,6 +32,19 @@ Before making changes, read these files:
 - `src/boardData.ts` - board tile names, categories, and land prices.
 - `src/businessData.ts` - business cards and income data.
 - `src/App.css` - board, UI, modal, and responsive styles.
+
+## Cross-Machine AI Memory
+
+The user works on this project from more than one machine. Future AI assistants must treat these repository files as the shared memory between machines:
+
+- `AGENTS.md`
+- `HANDOFF.md`
+- `DEVLOG.md`
+- `TODO.md`
+
+Before doing any coding or Git operation, read `AGENTS.md` and follow its rules. This prevents the office machine and home machine from acting like separate disconnected sessions.
+
+Important rule: GitHub is the source of truth at the start of each session. Always check/fetch/pull before editing unless the user explicitly asks to inspect local uncommitted work first.
 
 ## Current Game Concept
 
@@ -347,18 +363,33 @@ Symptoms:
 
 - `git add` fails with `fatal: Unable to write new index file`.
 - local `git log -1` may be stale even though GitHub has newer commits.
+- `git pull` may update working-tree files but fail before writing the index.
 
-The last successful push used an alternate index workflow.
-At home, normal Git may work fine:
+Permanent-preferred fix:
+
+- Use a clean clone in a normal user-owned folder such as `C:\Dev\monopoly-chonburi-game`.
+- Do not copy the project folder including `.git` between machines.
+- Do not keep the repository inside OneDrive, Google Drive, Dropbox, or another synced folder.
+- Do not alternate Git operations between Administrator, normal Windows user, and sandbox users in the same clone.
+
+Normal start commands on any machine:
 
 ```powershell
+git status --short --branch
+git fetch origin
 git pull origin main
 npm.cmd install
 npm.cmd run dev
 ```
 
-If another machine sees no permission problem, use normal Git commands.
-If this office machine needs another push and `git add` fails again, use the previously proven alternate-index approach or repair `.git` permissions.
+If local changes exist before pulling, preserve them first:
+
+```powershell
+git stash push -u -m "work before pull"
+git pull --ff-only origin main
+```
+
+If this existing office clone hits `.git/index` errors again, stop and preserve work. Prefer a clean clone or repair `.git` ownership instead of repeatedly retrying the same failing Git command.
 
 ## Latest Known Verification
 
