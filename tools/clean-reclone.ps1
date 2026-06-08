@@ -96,6 +96,6 @@ if (-not $SkipInstall) {
 
 Write-Step "Done"
 Write-Host "Clean clone: $TargetPath"
-if (Test-Path -LiteralPath $archivePath) {
+if ($null -ne $archivePath -and (Test-Path -LiteralPath $archivePath)) {
   Write-Host "Archived old clone: $archivePath"
 }
