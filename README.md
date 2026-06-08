@@ -36,6 +36,14 @@ powershell -ExecutionPolicy Bypass -File .\tools\clean-reclone.ps1 -Force
 The old folder is moved to a sibling `_repo_archive` folder before the fresh clone is created.
 If the old folder is locked by an editor, terminal, dev server, or AI workspace, the script creates a timestamped fallback clone next to it instead.
 
+If the old clone cannot pull this script, download the latest script from GitHub and run it:
+
+```powershell
+$runner = Join-Path $env:TEMP "clean-reclone-monopoly.ps1"
+Invoke-WebRequest -UseBasicParsing "https://raw.githubusercontent.com/Jenovic-th/monopoly-chonburi-game/main/tools/clean-reclone.ps1" -OutFile $runner
+powershell -ExecutionPolicy Bypass -File $runner -TargetPath "E:\Codex GPT\Monopoly Game" -Force
+```
+
 ## Validation
 
 Run these before pushing changes:

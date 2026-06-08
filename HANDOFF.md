@@ -410,6 +410,14 @@ cd "E:\Codex GPT"
 powershell -ExecutionPolicy Bypass -File "E:\Codex GPT\Monopoly Game\tools\clean-reclone.ps1" -TargetPath "E:\Codex GPT\Monopoly Game" -Force
 ```
 
+If the clone cannot pull the latest script from GitHub, download and run the script directly:
+
+```powershell
+$runner = Join-Path $env:TEMP "clean-reclone-monopoly.ps1"
+Invoke-WebRequest -UseBasicParsing "https://raw.githubusercontent.com/Jenovic-th/monopoly-chonburi-game/main/tools/clean-reclone.ps1" -OutFile $runner
+powershell -ExecutionPolicy Bypass -File $runner -TargetPath "E:\Codex GPT\Monopoly Game" -Force
+```
+
 Run the same command on the home machine if that clone has similar Git permission or push/pull problems.
 
 ## Latest Known Verification
