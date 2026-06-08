@@ -391,6 +391,26 @@ git pull --ff-only origin main
 
 If this existing office clone hits `.git/index` errors again, stop and preserve work. Prefer a clean clone or repair `.git` ownership instead of repeatedly retrying the same failing Git command.
 
+### Permanent Clean Reclone Command
+
+Use this when a machine repeatedly fails on Git operations, has mixed `.git` permissions, or was copied between machines.
+It archives the old clone into `_repo_archive` and creates a fresh clone from GitHub at the original path.
+
+From inside the project:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\tools\clean-reclone.ps1 -Force
+```
+
+If the clone is too broken, run it from the parent folder with an absolute path:
+
+```powershell
+cd "E:\Codex GPT"
+powershell -ExecutionPolicy Bypass -File "E:\Codex GPT\Monopoly Game\tools\clean-reclone.ps1" -TargetPath "E:\Codex GPT\Monopoly Game" -Force
+```
+
+Run the same command on the home machine if that clone has similar Git permission or push/pull problems.
+
 ## Latest Known Verification
 
 Before this handoff, the project passed:

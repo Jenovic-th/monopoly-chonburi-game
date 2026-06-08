@@ -81,6 +81,35 @@ npm.cmd install
 If this existing clone hits `.git/index` write errors again, do not keep retrying blindly.
 Use `git status`, preserve local work with `git stash push -u`, then recommend a clean clone or repair file ownership.
 
+## Permanent Clean Reclone Procedure
+
+If Git metadata problems repeat, use the project script instead of patching `.git` file by file.
+The script archives the old clone into a sibling `_repo_archive` folder, then clones a fresh copy from GitHub into the original path.
+
+Run from PowerShell:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\tools\clean-reclone.ps1 -Force
+```
+
+If the current clone is too broken to run scripts from inside it, run the script by absolute path from the parent folder:
+
+```powershell
+cd "E:\Codex GPT"
+powershell -ExecutionPolicy Bypass -File "E:\Codex GPT\Monopoly Game\tools\clean-reclone.ps1" -TargetPath "E:\Codex GPT\Monopoly Game" -Force
+```
+
+After the clean clone is created:
+
+```powershell
+cd "E:\Codex GPT\Monopoly Game"
+npm.cmd run check:encoding
+npm.cmd run lint
+npm.cmd run build
+```
+
+Use the same procedure on the home machine if it has copied folders, mixed permissions, stale Git metadata, or repeated push/pull failures.
+
 ## Project Entry Points
 
 Read these files before significant work:

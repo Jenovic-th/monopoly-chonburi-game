@@ -25,6 +25,16 @@ Then open the local URL printed by Vite, normally:
 http://localhost:5173/
 ```
 
+## Clean Reclone
+
+If Git push/pull/add starts failing repeatedly on a machine, archive the current clone and recreate it from GitHub:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\tools\clean-reclone.ps1 -Force
+```
+
+The old folder is moved to a sibling `_repo_archive` folder before the fresh clone is created.
+
 ## Validation
 
 Run these before pushing changes:
