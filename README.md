@@ -1,73 +1,97 @@
-# React + TypeScript + Vite
+# Monopoly Chonburi (บอร์ดเกมเศรษฐีชลบุรี)
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A modern, fast-paced Monopoly-style strategy board game built with **React**, **TypeScript**, and **Vite**, featuring a localized 40-tile Chonburi / Sriracha / Pattaya theme, dynamic economy loops, land policies, and influence cards.
 
-Currently, two official plugins are available:
+---
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## 🎲 Game Overview
 
-## React Compiler
+**Monopoly Chonburi** puts players in control of local commerce, land development, and strategic influence across 4 Chonburi economic zones:
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+1. **Bangsaen + Nong Mon** (Tiles `00-10`): Tourism, seafood markets, view points, and Burapha University.
+2. **Sriracha + Laem Chabang** (Tiles `11-20`): Ports, industrial estates, parks, and Chonburi Prison.
+3. **Amata City + Phan Thong** (Tiles `21-30`): Major industrial zones, tech factories, and Local Power Broker.
+4. **Pattaya** (Tiles `31-39`): Entertainment, nightlife, theme parks, and prime real estate.
 
-## Expanding the ESLint configuration
+---
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+## 🏆 Victory Condition (Demo 1)
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+The first player to reach a **Net Worth of ฿10,000,000** wins!
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+Net Worth calculation includes:
+- 💵 Current Cash
+- 🏪 Invested Business Value
+- 🏞 Land Ownership Value
+- 🃏 Influence Card Value
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+---
+
+## ⚙️ Key Game Systems
+
+### 1. Business Investments & Upgrades (Level 1-3)
+- Players land on normal tiles to purchase **Small**, **Medium**, or **Large** business cards.
+- Returning to an owned tile allows upgrading businesses up to **Level 3** (Income multipliers: `x1.0`, `x1.8`, `x2.5`).
+
+### 2. Land Ownership & Open Lease Policy
+- Players can purchase land titles on normal tiles.
+- **Land Rent**: Landing on rival land incurs a 3% land rent fee.
+- **Land Policy**:
+  - `Open Lease` (Default): Other players can build tenant businesses, paying a 10% lease share during start-of-lap payouts.
+  - `Owner Only`: Blocks rival players from building new businesses on that tile.
+
+### 3. Special Tiles
+- **`00` Investment Bank**: Allows retrospective investments in previously unlocked tile ranges (`01-09`, `01-19`, `01-29`, `01-39`).
+- **`05` Political Event**: Triggers board-wide events (COVID-19, Tourism Boom, Weak Baht, Thai Stimulus, Underground Lottery).
+- **`10` Burapha University**: Study for Bachelor's (+15% income bonus) or Master's (+30% income bonus).
+- **`20` Chonburi Prison**: Grants a 5% Prison Contact discount coupon for influence card purchases.
+- **`30` Local Power Broker**: Underground deals for special Influence Cards (with a 20% police raid jail risk).
+
+### 4. Influence Cards
+- **Influence Eviction** (฿450,000): Remove a rival business with 50% cost refund.
+- **Lease Pressure** (฿350,000): Increases next Open Lease tenant share to 20%.
+- **Port Connection** (฿400,000): Grants +40% income for industrial & port businesses next lap.
+- **Tax Relief** (฿300,000): Rent immunity on rival lands for the next 3 landings.
+- **Zoning Permit** (฿500,000): Instantly upgrade 1 of your businesses by +1 level for free.
+
+---
+
+## 🛠 Local Setup & Development
+
+### Prerequisites
+- [Node.js](https://nodejs.org/) (v18+ recommended)
+- `npm`
+
+### Installation
+
+```bash
+# Clone the repository
+git clone https://github.com/Jenovic-th/monopoly-chonburi-game.git
+
+# Navigate into project folder
+cd monopoly-sriracha
+
+# Install dependencies
+npm install
+
+# Start Vite local development server
+npm run dev
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+Open [http://localhost:5173](http://localhost:5173) in your browser.
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+### Verification Scripts
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+# Run ESLint check
+npm run lint
+
+# Run TypeScript & Vite build
+npm run build
 ```
+
+---
+
+## 📄 License
+
+This project is licensed under the MIT License.

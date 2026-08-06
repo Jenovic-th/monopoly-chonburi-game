@@ -43,11 +43,6 @@
 - [x] Set education income bonus rules:
   - bachelor completed: business income +15%
   - master completed: business income +30%
-- [x] Add Burapha University tuition:
-  - bachelor study costs `250,000`
-  - master degree costs `750,000`
-  - unaffordable study options are disabled
-- [x] Show estimated tile `00` income breakdown in the player panel.
 - [x] Add business card economy concept data:
   - starting cash target: `100,000`
   - zone 1 prices: `10,000 / 35,000 / 80,000`
@@ -114,7 +109,7 @@
 - [x] Exclude special tiles from Investment Bank investment choices.
 - [x] Add placeholder investment target selection UI.
 - [x] Add placeholder 3-plan investment cards after choosing an investment target.
-- [x] Let AI use Investment Bank choices automatically.
+- [x] Keep AI Investment Bank behavior as status-only for now.
 - [x] Add Local Power Broker concept UI:
   - landing on tile `30` shows 2 random influence card offers
   - player can choose 1 card or walk away
@@ -174,9 +169,31 @@
 - [x] Add Investment Bank back navigation:
   - after opening a target tile's business cards, Back returns to the tile list without spending the Investment Bank opportunity
   - Skip investment still ends the opportunity
-- [x] Make Investment Bank popup movable:
-  - drag handle lets the player move the popup away from board tiles
-  - position resets when a new Investment Bank choice starts
+- [x] Add tenant and Open Lease visibility:
+  - land detail shows businesses on that tile
+  - owner businesses and tenant businesses are separated
+  - expected Open Lease income is shown
+  - business detail shows land owner and tenant status
+- [x] Add Land Policy v1:
+  - purchased land defaults to `Open Lease`
+  - land owner can switch between `Open Lease` and `Owner Only`
+  - `Owner Only` blocks other players from buying or upgrading businesses there
+  - existing tenant businesses remain in place
+  - Investment Bank respects `Owner Only`
+- [x] Compact the player ledger UI:
+  - cash, income, and education are merged into the player header
+  - Property Cards display as compact tiles
+  - clicking a card still opens the detail popup
+- [x] Add simple AI economic decisions:
+  - AI buys affordable businesses
+  - AI upgrades existing businesses before buying new ones
+  - AI buys unowned land when it has enough cash
+  - AI sets simple land policies
+  - AI respects `Owner Only`
+- [x] Add Demo 1 win condition:
+  - target is `10,000,000` Net Worth
+  - winner is checked after each player turn
+  - winner popup shows ranking and can start a new game
 
 ## Next
 
@@ -185,33 +202,26 @@
 - [x] Deduct placeholder investment costs from player cash.
 - [x] Store selected investments per player and per tile.
 - [x] Convert business card choices into real purchases.
-- [x] Enforce business stall ownership:
-  - each tile/card stall can have only one owner
-  - rival-owned stalls are unavailable to buy
-  - only the current owner can upgrade the stall
 - [x] Add business upgrade levels 1-3 when returning to the same tile.
 - [x] Decide when investment income is paid.
 - [x] Pay investment income from stored investments.
 - [x] Add land ownership purchase flow.
 - [x] Add board ownership markers for land owners.
-- [ ] Decide land rent and eviction/seizure rules.
+- [ ] Decide eviction/seizure rules after more playtesting.
 - [x] Apply education income bonus when business income is paid.
-- [x] Add game end tracking and Net Worth winner screen:
-  - target net worth `10,000,000`
-  - show winner popup and ranking
-  - allow continuing for balance testing or resetting the game
+- [x] Add game end tracking and Net Worth winner screen.
 - [ ] Refine responsive board/panel proportions after more playtesting.
 - [ ] Decide whether investment cards should vary by tile category or zone.
-- [ ] Decide if multiple players can invest on the same tile.
-- [ ] Decide what happens if a land owner buys a tile that already has investments.
+- [x] Decide if multiple players can invest on the same tile.
+- [x] Decide what happens if a land owner buys a tile that already has investments.
 - [ ] Decide what the 3 action cards should actually do.
 - [ ] Decide whether card choices should depend on tile category.
-- [x] Let AI choose business cards automatically on normal tiles.
+- [ ] Decide whether AI should choose cards automatically.
 - [ ] Add real card result display after selecting a card.
 - [x] Add tile value and purchase price.
 - [x] Add ownership system for land.
 - [x] Add rent system.
-- [ ] Decide how land owners interact with small businesses on their land.
+- [x] Decide how land owners interact with small businesses on their land.
 - [x] Add behavior for special tiles:
   - Chonburi Prison
 - [x] Show Chonburi Prison coupon in the Influence player detail popup.
@@ -223,28 +233,11 @@
 - [x] Widen desktop board/player layout for better readability.
 - [x] Shorten board land price labels.
 - [x] Add Net Worth ranking popup for balance testing.
-- [x] Add real Local Power Broker card effects, prices, and card inventory for Demo 1.
-- [x] Group board business markers by player per tile so upgrades/multiple businesses do not clutter the board.
-- [x] Add 20% jail-risk roll when influence cards are used.
-- [x] Hide prototype test controls behind Dev Mode.
-- [x] Add board focus toggle:
-  - hide/show the player ledger on demand
-  - expand the board when the ledger is hidden
-  - use a 16:10 rectangle on desktop and a 10:16 rectangle on portrait/mobile
-  - keep current 40-tile numbering and special tiles unchanged
-- [ ] Redesign the center board console as a fixed compact panel that cannot overflow the board.
-- [x] Add simple AI economic decisions:
-  - buy or upgrade businesses on normal tiles
-  - use Investment Bank tile `00`
-  - rank choices by income gain per price
-  - keep a cash reserve before buying
-- [x] Add AI land buyout decisions:
-  - buy unowned normal-tile land only
-  - keep a larger land-buy cash reserve
-  - require stable business income before buying land
-  - try buying/upgrading businesses before land buyout
-  - value land by landing rent, existing own business, and tenant business Open Lease
-- [ ] Add AI land buyout balance tuning after playtesting.
+- [x] Add real Local Power Broker card effects, prices, card inventory, and 20% jail-risk roll.
+- [x] Add 2-3 real Local Power Broker effects for Demo 1.
+- [ ] Playtest and tune the `10,000,000` Net Worth target.
+- [x] Hide dev cash/test move controls behind a Dev Mode toggle.
+- [x] Add simple AI economic decisions.
 - [ ] Update README with setup, dev, and project overview.
 
 ## Design Questions

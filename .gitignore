@@ -25,3 +25,9 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Godot generated files
+.godot/
+*.import
+*.uid
+

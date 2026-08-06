@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState, type PointerEvent } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import { boardTiles, type TileCategory } from './boardData'
 import {
   businessLevelMultipliers,
@@ -35,6 +35,7 @@ type Phase =
   | 'political-event'
   | 'land-choice'
   | 'influence-choice'
+  | 'game-over'
 
 type EducationStage = 'none' | 'bachelorCompleted' | 'masterCompleted'
 
@@ -63,8 +64,6 @@ type InvestmentOffer = {
   options: number[]
 }
 
-type InfluenceEffect = 'eviction' | 'leasePressure' | 'portConnection'
-
 type InfluenceCard = {
   id: string
   title: string
@@ -73,6 +72,13 @@ type InfluenceCard = {
   description: string
   effect: InfluenceEffect
 }
+
+type InfluenceEffect =
+  | 'eviction'
+  | 'leasePressure'
+  | 'portConnection'
+  | 'taxRelief'
+  | 'zoningPermit'
 
 type PoliticalEventScope = 'all' | 'industrial' | 'tourism'
 
@@ -116,10 +122,13 @@ type BusinessHolding = {
   baseIncome: number
 }
 
+type LandPolicy = 'openLease' | 'ownerOnly'
+
 type LandHolding = {
   tileId: number
   playerIndex: number
   pricePaid: number
+  policy: LandPolicy
 }
 
 type InfluenceHolding = {
@@ -131,6 +140,17 @@ type InfluenceHolding = {
   risk: string
   description: string
   effect: InfluenceEffect
+}
+
+type NetWorthRow = {
+  player: Player
+  playerIndex: number
+  cash: number
+  businessValue: number
+  landValue: number
+  influenceValue: number
+  income: number
+  total: number
 }
 
 const players: Player[] = [
@@ -162,10 +182,12 @@ const startingCash = 100000
 const passStartIncome = 20000
 const landRentRate = 0.03
 const openLeaseShareRate = 0.1
+const landPolicyLabels = {
+  openLease: 'Open Lease',
+  ownerOnly: 'Owner Only',
+} satisfies Record<LandPolicy, string>
 const prisonJackpotMinimum = 20000
 const prisonContactDiscountRate = 0.05
-const influenceJailRiskRate = 0.2
-const influenceJailTurns = 2
 const investmentBankTile = 0
 const politicalEventTile = 5
 const prisonTile = 20
@@ -179,16 +201,10 @@ const testMoveOptions = Array.from({ length: 12 }, (_, index) => index + 1)
 const devCashOptions = [100000, 500000, 1000000]
 const devAllCashAmount = 500000
 const maxInfluenceCards = 3
+const aiBusinessCashReserve = 20000
+const aiLandCashReserve = 50000
+const targetNetWorth = 10000000
 const studySkipTurns = 5
-const aiMinimumCashReserve = passStartIncome * 2
-const aiLandCashReserveMultiplier = 5
-const aiLandMinimumBusinessIncome = 90000
-const aiLandMinimumCashMultiple = 1.45
-const netWorthWinTarget = 10000000
-const educationTuition = {
-  bachelor: 250000,
-  master: 750000,
-} satisfies Record<Exclude<ActiveStudy, 'none'>, number>
 const educationIncomeBonus = {
   bachelorCompleted: 15,
   masterCompleted: 30,
@@ -262,26 +278,42 @@ const influenceCards: InfluenceCard[] = [
   {
     id: 'influence-eviction',
     title: 'Influence Eviction',
-    price: 300000,
-    risk: '20% jail risk on use',
-    description: 'Choose one rival business anywhere on the board and force it to close. The owner recovers 50% of the money paid into that business.',
+    price: 450000,
+    risk: '🚨 20% jail risk on deal',
+    description: 'Remove one rival business from any normal tile. The rival gets 50% of its invested cost back.',
     effect: 'eviction',
   },
   {
     id: 'lease-pressure',
     title: 'Lease Pressure',
     price: 350000,
-    risk: '20% jail risk on use',
-    description: 'Your next Open Lease collection is doubled from 10% to 20%, then this pressure ends.',
+    risk: '🚨 20% jail risk on deal',
+    description: 'Your next Open Lease collection uses 20% tenant share instead of 10%.',
     effect: 'leasePressure',
   },
   {
     id: 'port-connection',
     title: 'Port Connection',
     price: 400000,
-    risk: '20% jail risk on use',
-    description: 'Industrial and port business income pays 140% on your next income collection at tile 00.',
+    risk: '🚨 20% jail risk on deal',
+    description: 'Your next industrial and port business income collection increases by 40%.',
     effect: 'portConnection',
+  },
+  {
+    id: 'tax-relief',
+    title: 'Tax Relief',
+    price: 300000,
+    risk: '🚨 20% jail risk on deal',
+    description: 'Immunity from land rent on rival lands for your next 3 rent landings.',
+    effect: 'taxRelief',
+  },
+  {
+    id: 'zoning-permit',
+    title: 'Zoning Permit',
+    price: 500000,
+    risk: '🚨 20% jail risk on deal',
+    description: 'Upgrade 1 of your existing businesses by 1 level for free immediately.',
+    effect: 'zoningPermit',
   },
 ]
 
@@ -294,6 +326,10 @@ function rollDice(): DiceRoll {
     die2,
     total: die1 + die2,
   }
+}
+
+function rollJailRisk(): boolean {
+  return Math.random() < 0.20
 }
 
 function drawPoliticalEvent() {
@@ -349,10 +385,6 @@ function countStartPasses(startPosition: number, steps: number) {
   return Math.floor((startPosition + steps) / tileCount)
 }
 
-function rollInfluenceJailRisk() {
-  return Math.random() < influenceJailRiskRate
-}
-
 function App() {
   const [positions, setPositions] = useState<number[]>(() => players.map(() => 0))
   const [currentPlayerIndex, setCurrentPlayerIndex] = useState(0)
@@ -366,7 +398,6 @@ function App() {
     skipTurns: 0,
   })
   const [buraphaChoice, setBuraphaChoice] = useState<BuraphaChoice | null>(null)
-  const [educationPlayerIndex, setEducationPlayerIndex] = useState<number | null>(null)
   const [, setInvestmentVisits] = useState<number[]>(() => players.map(() => 0))
   const [investmentOffer, setInvestmentOffer] = useState<InvestmentOffer | null>(null)
   const [selectedInvestmentTile, setSelectedInvestmentTile] = useState<number | null>(null)
@@ -375,7 +406,7 @@ function App() {
   const [incomeModifiers, setIncomeModifiers] = useState<IncomeModifier[]>([])
   const [prisonJackpot, setPrisonJackpot] = useState(0)
   const [isNetWorthOpen, setIsNetWorthOpen] = useState(false)
-  const [isWinnerDismissed, setIsWinnerDismissed] = useState(false)
+  const [winnerIndex, setWinnerIndex] = useState<number | null>(null)
   const [prisonTurns, setPrisonTurns] = useState<number[]>(() => players.map(() => 0))
   const [prisonContactCoupons, setPrisonContactCoupons] = useState<boolean[]>(() =>
     players.map(() => false),
@@ -385,15 +416,15 @@ function App() {
   const [leasePressurePlayers, setLeasePressurePlayers] = useState<boolean[]>(() =>
     players.map(() => false),
   )
-  const [evictionCard, setEvictionCard] = useState<InfluenceHolding | null>(null)
+  const [taxReliefTurns, setTaxReliefTurns] = useState<number[]>(() => players.map(() => 0))
+  const [zoningPermitCardId, setZoningPermitCardId] = useState<string | null>(null)
+  const [devMode, setDevMode] = useState(false)
+  const [evictionCardId, setEvictionCardId] = useState<string | null>(null)
   const [cash, setCash] = useState<number[]>(() => players.map(() => startingCash))
   const [businesses, setBusinesses] = useState<BusinessHolding[]>([])
   const [landHoldings, setLandHoldings] = useState<LandHolding[]>([])
   const [selectedPlayerIndex, setSelectedPlayerIndex] = useState(0)
   const [inventoryDetail, setInventoryDetail] = useState<InventoryDetail>(null)
-  const [isDevMode, setIsDevMode] = useState(false)
-  const [isLedgerVisible, setIsLedgerVisible] = useState(true)
-  const [investmentModalOffset, setInvestmentModalOffset] = useState({ x: 0, y: 0 })
 
   const skipRequestedRef = useRef(false)
   const activeRunRef = useRef(false)
@@ -414,6 +445,7 @@ function App() {
   const prisonContactCouponsRef = useRef<boolean[]>(players.map(() => false))
   const influenceHoldingsRef = useRef<InfluenceHolding[]>([])
   const leasePressurePlayersRef = useRef<boolean[]>(players.map(() => false))
+  const taxReliefTurnsRef = useRef<number[]>(players.map(() => 0))
   const influenceCardIdRef = useRef(0)
   const forcedMoveRef = useRef<number | null>(null)
   const aiDelayResolverRef = useRef<(() => void) | null>(null)
@@ -422,13 +454,6 @@ function App() {
   const investmentChoiceResolverRef = useRef<(() => void) | null>(null)
   const politicalEventResolverRef = useRef<(() => void) | null>(null)
   const influenceChoiceResolverRef = useRef<(() => void) | null>(null)
-  const investmentModalDragRef = useRef<{
-    originX: number
-    originY: number
-    pointerId: number
-    startX: number
-    startY: number
-  } | null>(null)
 
   const tileOccupants = useMemo(() => {
     return positions.reduce<Record<number, number[]>>((occupants, position, index) => {
@@ -509,6 +534,78 @@ function App() {
   function updateLeasePressurePlayers(nextLeasePressurePlayers: boolean[]) {
     leasePressurePlayersRef.current = nextLeasePressurePlayers
     setLeasePressurePlayers(nextLeasePressurePlayers)
+  }
+
+  function updateTaxReliefTurns(nextTaxReliefTurns: number[]) {
+    taxReliefTurnsRef.current = nextTaxReliefTurns
+    setTaxReliefTurns(nextTaxReliefTurns)
+  }
+
+  function getNetWorthRowsFromState(
+    cashValues: number[],
+    businessValues: BusinessHolding[],
+    landValues: LandHolding[],
+    influenceValues: InfluenceHolding[],
+  ): NetWorthRow[] {
+    return players
+      .map((player, playerIndex) => {
+        const playerBusinesses = businessValues.filter(
+          (business) => business.playerIndex === playerIndex,
+        )
+        const businessValue = playerBusinesses.reduce(
+          (total, business) => total + business.pricePaid,
+          0,
+        )
+        const landValue = landValues
+          .filter((holding) => holding.playerIndex === playerIndex)
+          .reduce((total, holding) => total + holding.pricePaid, 0)
+        const influenceValue = influenceValues
+          .filter((holding) => holding.playerIndex === playerIndex)
+          .reduce((total, holding) => total + holding.pricePaid, 0)
+        const income = playerBusinesses.reduce(
+          (total, business) => total + getBusinessHoldingIncome(business),
+          0,
+        )
+        const total = cashValues[playerIndex] + businessValue + landValue + influenceValue
+
+        return {
+          player,
+          playerIndex,
+          cash: cashValues[playerIndex],
+          businessValue,
+          landValue,
+          influenceValue,
+          income,
+          total,
+        }
+      })
+      .sort((a, b) => b.total - a.total)
+  }
+
+  function checkWinCondition() {
+    if (winnerIndex !== null) {
+      return true
+    }
+
+    const ranking = getNetWorthRowsFromState(
+      cashRef.current,
+      businessesRef.current,
+      landHoldingsRef.current,
+      influenceHoldingsRef.current,
+    )
+    const winner = ranking.find((row) => row.total >= targetNetWorth)
+
+    if (!winner) {
+      return false
+    }
+
+    setWinnerIndex(winner.playerIndex)
+    setSelectedPlayerIndex(winner.playerIndex)
+    setIsNetWorthOpen(false)
+    setInventoryDetail(null)
+    setPhase('game-over')
+    setStatus(`${winner.player.name} reached ${formatMoney(winner.total)} Net Worth and won Demo 1.`)
+    return true
   }
 
   function getEducationIncomeBonusRate(playerIndex: number) {
@@ -601,10 +698,10 @@ function App() {
         return payments
       }
 
-      const rate = leasePressurePlayersRef.current[landHolding.playerIndex]
+      const leaseShareRate = leasePressurePlayersRef.current[landHolding.playerIndex]
         ? openLeaseShareRate * 2
         : openLeaseShareRate
-      const amount = Math.round(item.income * passCount * rate)
+      const amount = Math.round(item.income * passCount * leaseShareRate)
 
       if (amount <= 0) {
         return payments
@@ -644,18 +741,12 @@ function App() {
     })
     updateCash(nextCash)
 
-    const pressuredOwners = new Set(
-      leaseShares
-        .map((payment) => payment.ownerIndex)
-        .filter((ownerIndex) => leasePressurePlayersRef.current[ownerIndex]),
-    )
-
-    if (pressuredOwners.size > 0) {
-      updateLeasePressurePlayers(
-        leasePressurePlayersRef.current.map((isPressured, ownerIndex) =>
-          pressuredOwners.has(ownerIndex) ? false : isPressured,
-        ),
+    if (leaseShares.length > 0) {
+      const ownersPaid = new Set(leaseShares.map((payment) => payment.ownerIndex))
+      const nextLeasePressurePlayers = leasePressurePlayersRef.current.map(
+        (hasPressure, ownerIndex) => hasPressure && !ownersPaid.has(ownerIndex),
       )
+      updateLeasePressurePlayers(nextLeasePressurePlayers)
     }
 
     if (modifiedIncome.usedModifierIds.length > 0) {
@@ -687,6 +778,22 @@ function App() {
     }
 
     const rentDue = Math.round(tile.landPrice * landRentRate)
+
+    if (taxReliefTurnsRef.current[playerIndex] > 0) {
+      const nextTaxRelief = [...taxReliefTurnsRef.current]
+      nextTaxRelief[playerIndex] -= 1
+      updateTaxReliefTurns(nextTaxRelief)
+
+      return {
+        ownerIndex: landHolding.playerIndex,
+        rentDue,
+        rentPaid: 0,
+        taxReliefActive: true,
+        payerCash: cashRef.current[playerIndex],
+        ownerCash: cashRef.current[landHolding.playerIndex],
+      }
+    }
+
     const rentPaid = Math.min(cashRef.current[playerIndex], rentDue)
     const nextCash = [...cashRef.current]
     nextCash[playerIndex] -= rentPaid
@@ -697,6 +804,7 @@ function App() {
       ownerIndex: landHolding.playerIndex,
       rentDue,
       rentPaid,
+      taxReliefActive: false,
       payerCash: nextCash[playerIndex],
       ownerCash: nextCash[landHolding.playerIndex],
     }
@@ -828,14 +936,18 @@ function App() {
     const rentResult =
       typeof finalPosition === 'number' ? payLandRent(playerIndex, finalPosition) : null
     const rentMessage = rentResult
-      ? `${player.name} paid ${formatMoney(rentResult.rentPaid)} rent to ${players[rentResult.ownerIndex].name} for ${boardTiles[finalPosition as number].name}.`
+      ? rentResult.taxReliefActive
+        ? `🛡 Tax Relief Active! ${player.name} paid 0 rent to ${players[rentResult.ownerIndex].name} for ${boardTiles[finalPosition as number].name} (${taxReliefTurnsRef.current[playerIndex]} charges left).`
+        : `${player.name} paid ${formatMoney(rentResult.rentPaid)} rent to ${players[rentResult.ownerIndex].name} for ${boardTiles[finalPosition as number].name}.`
       : ''
 
     if (rentResult) {
       setStatus(
-        rentResult.rentPaid < rentResult.rentDue
-          ? `${rentMessage} Rent due was ${formatMoney(rentResult.rentDue)}, but ${player.name} only had enough to pay ${formatMoney(rentResult.rentPaid)}.`
-          : rentMessage,
+        rentResult.taxReliefActive
+          ? rentMessage
+          : rentResult.rentPaid < rentResult.rentDue
+            ? `${rentMessage} Rent due was ${formatMoney(rentResult.rentDue)}, but ${player.name} only had enough to pay ${formatMoney(rentResult.rentPaid)}.`
+            : rentMessage,
       )
     }
 
@@ -871,7 +983,7 @@ function App() {
       player.role === 'Human' &&
       finalPosition === buraphaTile
     ) {
-      await handleBuraphaTile(playerIndex)
+      await handleBuraphaTile()
       return
     }
 
@@ -881,6 +993,16 @@ function App() {
       finalPosition === localPowerBrokerTile
     ) {
       await handleLocalPowerBrokerTile(playerIndex, runId)
+      return
+    }
+
+    if (
+      runId === runIdRef.current &&
+      player.role === 'AI' &&
+      typeof finalPosition === 'number' &&
+      !noCardTiles.has(finalPosition)
+    ) {
+      await handleAiNormalTile(playerIndex, finalPosition, rentMessage)
       return
     }
 
@@ -899,24 +1021,6 @@ function App() {
       })
       cardChoiceResolverRef.current = null
     }
-
-    if (
-      runId === runIdRef.current &&
-      player.role === 'AI' &&
-      typeof finalPosition === 'number' &&
-      !noCardTiles.has(finalPosition)
-    ) {
-      await applyAiBusinessChoice(playerIndex, finalPosition, 'AI business choice', runId)
-    }
-
-    if (
-      runId === runIdRef.current &&
-      player.role === 'AI' &&
-      typeof finalPosition === 'number' &&
-      !noCardTiles.has(finalPosition)
-    ) {
-      await applyAiLandChoice(playerIndex, finalPosition, runId)
-    }
   }
 
   function getInvestmentOptions(visitCount: number) {
@@ -930,6 +1034,41 @@ function App() {
     return { maxTile, options }
   }
 
+  function handleAIInvestmentBank(playerIndex: number, options: number[]) {
+    const aiCash = cashRef.current[playerIndex]
+    if (aiCash < 100000) return false
+
+    for (const tileId of options) {
+      const tile = boardTiles[tileId]
+      const cards = getBusinessCardsForTile(tile)
+      const policyBlock = getLandPolicyBlock(tileId, playerIndex)
+      if (policyBlock) continue
+
+      // Look for existing business to upgrade first
+      const existing = businessesRef.current.find(
+        (b) => b.playerIndex === playerIndex && b.tileId === tileId && b.level < maxBusinessLevel,
+      )
+
+      if (existing) {
+        const card = cards.find((c) => c.id === existing.cardId)
+        if (card && aiCash >= card.price) {
+          buyOrUpgradeBusinessCard(card, tileId)
+          return true
+        }
+      }
+
+      // Otherwise try buying a new business card
+      for (const card of cards) {
+        if (aiCash >= card.price + aiBusinessCashReserve) {
+          buyOrUpgradeBusinessCard(card, tileId)
+          return true
+        }
+      }
+    }
+
+    return false
+  }
+
   async function handleInvestmentBankTile(playerIndex: number, runId: number) {
     const player = players[playerIndex]
     const nextVisits = [...investmentVisitsRef.current]
@@ -940,12 +1079,16 @@ function App() {
     const { maxTile, options } = getInvestmentOptions(visitCount)
 
     if (player.role === 'AI') {
-      setStatus(`${player.name} reached Investment Bank visit ${visitCount}. AI is checking 01-${maxTile}.`)
-      await applyAiInvestmentBankChoice(playerIndex, options, runId)
+      const didInvest = handleAIInvestmentBank(playerIndex, options)
+      if (!didInvest) {
+        setStatus(
+          `${player.name} reached Investment Bank visit ${visitCount} (unlocked 01-${maxTile.toString().padStart(2, '0')}) and saved cash.`,
+        )
+      }
+      await wait(aiDelayMs)
       return
     }
 
-    setInvestmentModalOffset({ x: 0, y: 0 })
     setInvestmentOffer({
       playerIndex,
       visitCount,
@@ -1068,7 +1211,21 @@ function App() {
     const player = players[playerIndex]
 
     if (player.role === 'AI') {
-      setStatus(`${player.name} reached Local Power Broker. AI skips influence cards for now.`)
+      const offer = getRandomInfluenceOffer()
+      const aiCards = influenceHoldingsRef.current.filter((h) => h.playerIndex === playerIndex)
+      const affordableCard = offer.find((card) => {
+        const hasCoupon = prisonContactCouponsRef.current[playerIndex]
+        const discount = hasCoupon ? Math.round(card.price * prisonContactDiscountRate) : 0
+        return cashRef.current[playerIndex] - (card.price - discount) >= 300000
+      })
+
+      if (affordableCard && aiCards.length < maxInfluenceCards) {
+        buyInfluenceCardForAI(playerIndex, affordableCard)
+        await wait(aiDelayMs)
+        return
+      }
+
+      setStatus(`${player.name} reached Local Power Broker and walked away.`)
       await wait(aiDelayMs)
       return
     }
@@ -1126,7 +1283,7 @@ function App() {
     }
   }
 
-  async function handleBuraphaTile(playerIndex: number) {
+  async function handleBuraphaTile() {
     const currentEducation = educationRef.current
     const nextChoice: BuraphaChoice =
       currentEducation.stage === 'none'
@@ -1135,7 +1292,6 @@ function App() {
           ? 'master'
           : 'alumni'
 
-    setEducationPlayerIndex(playerIndex)
     setBuraphaChoice(nextChoice)
     setPhase('education-choice')
 
@@ -1152,7 +1308,6 @@ function App() {
     })
     educationChoiceResolverRef.current = null
     setBuraphaChoice(null)
-    setEducationPlayerIndex(null)
   }
 
   async function playRound() {
@@ -1172,6 +1327,11 @@ function App() {
         }
 
         await playTurn(playerIndex, runId)
+
+        if (runId === runIdRef.current && checkWinCondition()) {
+          activeRunRef.current = false
+          return
+        }
       }
 
       continueStudyRounds = educationRef.current.skipTurns > 0 || prisonTurnsRef.current[0] > 0
@@ -1189,6 +1349,10 @@ function App() {
   }
 
   function handlePrimaryAction() {
+    if (phase === 'game-over') {
+      return
+    }
+
     if (phase === 'ready') {
       void playRound()
       return
@@ -1219,7 +1383,7 @@ function App() {
   }
 
   function handleTestMove(steps: number) {
-    if (phase !== 'ready' || activeRunRef.current) {
+    if (phase !== 'ready' || activeRunRef.current || winnerIndex !== null) {
       return
     }
 
@@ -1265,6 +1429,193 @@ function App() {
     }
   }
 
+  function getLandPolicyBlockFromHoldings(
+    tileId: number,
+    playerIndex: number,
+    holdings: LandHolding[],
+  ) {
+    const landHolding = holdings.find((holding) => holding.tileId === tileId)
+
+    if (
+      !landHolding ||
+      landHolding.playerIndex === playerIndex ||
+      landHolding.policy !== 'ownerOnly'
+    ) {
+      return null
+    }
+
+    return `${boardTiles[tileId].name} is Owner Only. ${players[landHolding.playerIndex].name} blocks other players from buying or upgrading businesses here.`
+  }
+
+  function getLandPolicyBlock(tileId: number, playerIndex: number) {
+    return getLandPolicyBlockFromHoldings(tileId, playerIndex, landHoldingsRef.current)
+  }
+
+  function getAffordableBusinessCard(cards: BusinessCard[], playerCash: number) {
+    return [...cards]
+      .sort((a, b) => b.price - a.price)
+      .find((card) => playerCash - card.price >= aiBusinessCashReserve)
+  }
+
+  function getAiBusinessAction(playerIndex: number, tileId: number) {
+    const policyBlock = getLandPolicyBlock(tileId, playerIndex)
+
+    if (policyBlock) {
+      return null
+    }
+
+    const tile = boardTiles[tileId]
+    const cards = getBusinessCardsForTile(tile)
+    const playerBusinessesOnTile = businessesRef.current.filter(
+      (business) => business.playerIndex === playerIndex && business.tileId === tileId,
+    )
+    const upgradeCandidate = playerBusinessesOnTile
+      .filter((business) => business.level < maxBusinessLevel)
+      .map((business) => ({
+        business,
+        card: cards.find((card) => card.id === business.cardId),
+      }))
+      .filter((item): item is { business: BusinessHolding; card: BusinessCard } =>
+        Boolean(item.card),
+      )
+      .sort((a, b) => b.card.price - a.card.price)
+      .find((item) => cashRef.current[playerIndex] - item.card.price >= aiBusinessCashReserve)
+
+    if (upgradeCandidate) {
+      return {
+        type: 'upgrade' as const,
+        card: upgradeCandidate.card,
+        business: upgradeCandidate.business,
+      }
+    }
+
+    const ownedCardIds = new Set(playerBusinessesOnTile.map((business) => business.cardId))
+    const newCard = getAffordableBusinessCard(
+      cards.filter((card) => !ownedCardIds.has(card.id)),
+      cashRef.current[playerIndex],
+    )
+
+    if (!newCard) {
+      return null
+    }
+
+    return {
+      type: 'buy' as const,
+      card: newCard,
+    }
+  }
+
+  function runAiBusinessDecision(playerIndex: number, tileId: number) {
+    const action = getAiBusinessAction(playerIndex, tileId)
+
+    if (!action) {
+      return null
+    }
+
+    const tile = boardTiles[tileId]
+    const nextCash = [...cashRef.current]
+    nextCash[playerIndex] -= action.card.price
+    updateCash(nextCash)
+
+    if (action.type === 'upgrade') {
+      const nextLevel = action.business.level + 1
+      updateBusinesses(
+        businessesRef.current.map((business) =>
+          business.id === action.business.id
+            ? {
+                ...business,
+                level: nextLevel,
+                pricePaid: business.pricePaid + action.card.price,
+              }
+            : business,
+        ),
+      )
+
+      return `${players[playerIndex].name} upgraded ${action.card.title} at ${tile.name} to level ${nextLevel}.`
+    }
+
+    const nextBusiness: BusinessHolding = {
+      id: `${playerIndex}-${tileId}-${action.card.id}`,
+      playerIndex,
+      tileId,
+      cardId: action.card.id,
+      title: action.card.title,
+      tier: action.card.tier,
+      level: 1,
+      pricePaid: action.card.price,
+      baseIncome: action.card.baseIncome,
+    }
+    updateBusinesses([...businessesRef.current, nextBusiness])
+
+    return `${players[playerIndex].name} bought ${action.card.title} at ${tile.name}.`
+  }
+
+  function runAiLandDecision(playerIndex: number, tileId: number) {
+    const tile = boardTiles[tileId]
+
+    if (
+      !tile.landPrice ||
+      landHoldingsRef.current.some((holding) => holding.tileId === tileId) ||
+      cashRef.current[playerIndex] - tile.landPrice < aiLandCashReserve
+    ) {
+      return null
+    }
+
+    const aiOwnsBusinessHere = businessesRef.current.some(
+      (business) => business.playerIndex === playerIndex && business.tileId === tileId,
+    )
+    const policy: LandPolicy = aiOwnsBusinessHere ? 'ownerOnly' : 'openLease'
+    const nextCash = [...cashRef.current]
+    nextCash[playerIndex] -= tile.landPrice
+    updateCash(nextCash)
+    updateLandHoldings([
+      ...landHoldingsRef.current,
+      {
+        tileId,
+        playerIndex,
+        pricePaid: tile.landPrice,
+        policy,
+      },
+    ])
+
+    return `${players[playerIndex].name} bought land at ${tile.name} and set ${landPolicyLabels[policy]}.`
+  }
+
+  async function handleAiNormalTile(playerIndex: number, tileId: number, rentMessage: string) {
+    const businessMessage = runAiBusinessDecision(playerIndex, tileId)
+    const landMessage = runAiLandDecision(playerIndex, tileId)
+    const messages = [rentMessage, businessMessage, landMessage].filter(Boolean)
+
+    if (messages.length > 0) {
+      setStatus(messages.join(' '))
+    } else {
+      setStatus(`${players[playerIndex].name} skipped business decisions at ${boardTiles[tileId].name}.`)
+    }
+
+    await wait(aiDelayMs)
+  }
+
+  function updateLandPolicy(tileId: number, policy: LandPolicy) {
+    const landHolding = landHoldingsRef.current.find((holding) => holding.tileId === tileId)
+
+    if (!landHolding) {
+      setStatus('No land owner found for this tile.')
+      return
+    }
+
+    if (landHolding.playerIndex !== currentPlayerIndex) {
+      setStatus(`${players[currentPlayerIndex].name} cannot change ${players[landHolding.playerIndex].name}'s land policy.`)
+      return
+    }
+
+    updateLandHoldings(
+      landHoldingsRef.current.map((holding) =>
+        holding.tileId === tileId ? { ...holding, policy } : holding,
+      ),
+    )
+    setStatus(`${boardTiles[tileId].name} policy changed to ${landPolicyLabels[policy]}.`)
+  }
+
   function buyCurrentLand() {
     const playerIndex = currentPlayerIndex
     const tile = selectedLandTile === null ? null : boardTiles[selectedLandTile]
@@ -1293,36 +1644,6 @@ function App() {
       return
     }
 
-    const result = buyLandForPlayer(playerIndex, tile.id)
-    closeLandDetail(result.message)
-  }
-
-  function buyLandForPlayer(playerIndex: number, tileId: number) {
-    const tile = boardTiles[tileId]
-
-    if (!tile.landPrice) {
-      return {
-        success: false,
-        message: `${tile.name} cannot be purchased.`,
-      }
-    }
-
-    if (landHoldingsRef.current.some((holding) => holding.tileId === tile.id)) {
-      return {
-        success: false,
-        message: `${tile.name} already has a land owner.`,
-      }
-    }
-
-    const playerCash = cashRef.current[playerIndex]
-
-    if (playerCash < tile.landPrice) {
-      return {
-        success: false,
-        message: `${players[playerIndex].name} needs ${formatMoney(tile.landPrice)} but only has ${formatMoney(playerCash)}.`,
-      }
-    }
-
     const nextCash = [...cashRef.current]
     nextCash[playerIndex] -= tile.landPrice
     updateCash(nextCash)
@@ -1332,13 +1653,12 @@ function App() {
         tileId: tile.id,
         playerIndex,
         pricePaid: tile.landPrice,
+        policy: 'openLease',
       },
     ])
-
-    return {
-      success: true,
-      message: `${players[playerIndex].name} bought land at ${tile.name} for ${formatMoney(tile.landPrice)}. Cash left: ${formatMoney(nextCash[playerIndex])}.`,
-    }
+    closeLandDetail(
+      `${players[playerIndex].name} bought land at ${tile.name} for ${formatMoney(tile.landPrice)}. Cash left: ${formatMoney(nextCash[playerIndex])}.`,
+    )
   }
 
   function getBusinessIncomeAtLevel(card: BusinessCard, level: number) {
@@ -1346,35 +1666,33 @@ function App() {
     return Math.round(card.baseIncome * multiplier)
   }
 
-  function purchaseBusinessCardForPlayer(playerIndex: number, card: BusinessCard, tileId: number) {
+  function buyOrUpgradeBusinessCard(card: BusinessCard, tileId = activeTile.id) {
+    const playerIndex = currentPlayerIndex
     const tile = boardTiles[tileId]
+    const policyBlock = getLandPolicyBlock(tileId, playerIndex)
+
+    if (policyBlock) {
+      setStatus(policyBlock)
+      return false
+    }
+
     const existingBusiness = businessesRef.current.find(
       (business) =>
+        business.playerIndex === playerIndex &&
         business.tileId === tileId &&
         business.cardId === card.id,
     )
 
-    if (existingBusiness && existingBusiness.playerIndex !== playerIndex) {
-      return {
-        success: false,
-        message: `${card.title} at ${tile.name} already belongs to ${players[existingBusiness.playerIndex].name}.`,
-      }
-    }
-
     if (existingBusiness && existingBusiness.level >= maxBusinessLevel) {
-      return {
-        success: false,
-        message: `${existingBusiness.title} at ${tile.name} is already max level.`,
-      }
+      setStatus(`${existingBusiness.title} at ${tile.name} is already max level.`)
+      return false
     }
 
     const playerCash = cashRef.current[playerIndex]
 
     if (playerCash < card.price) {
-      return {
-        success: false,
-        message: `${players[playerIndex].name} needs ${formatMoney(card.price)} but only has ${formatMoney(playerCash)}.`,
-      }
+      setStatus(`${players[playerIndex].name} needs ${formatMoney(card.price)} but only has ${formatMoney(playerCash)}.`)
+      return false
     }
 
     const nextCash = [...cashRef.current]
@@ -1390,14 +1708,14 @@ function App() {
                 ...business,
                 level: nextLevel,
                 pricePaid: business.pricePaid + card.price,
-          }
+              }
             : business,
         ),
       )
-      return {
-        success: true,
-        message: `${players[playerIndex].name} upgraded ${card.title} at ${tile.name} to level ${nextLevel} for ${formatMoney(card.price)}. New income: ${formatMoney(getBusinessIncomeAtLevel(card, nextLevel))} / round.`,
-      }
+      resolveCardChoice(
+        `${players[playerIndex].name} upgraded ${card.title} at ${tile.name} to level ${nextLevel} for ${formatMoney(card.price)}. New income: ${formatMoney(getBusinessIncomeAtLevel(card, nextLevel))} / round.`,
+      )
+      return true
     }
 
     const nextBusiness: BusinessHolding = {
@@ -1412,21 +1730,10 @@ function App() {
       baseIncome: card.baseIncome,
     }
     updateBusinesses([...businessesRef.current, nextBusiness])
-    return {
-      success: true,
-      message: `${players[playerIndex].name} bought ${card.title} at ${tile.name} for ${formatMoney(card.price)}. Cash left: ${formatMoney(nextCash[playerIndex])}.`,
-    }
-  }
-
-  function buyOrUpgradeBusinessCard(card: BusinessCard, tileId = activeTile.id) {
-    const result = purchaseBusinessCardForPlayer(currentPlayerIndex, card, tileId)
-
-    if (result.success) {
-      resolveCardChoice(result.message)
-      return
-    }
-
-    setStatus(result.message)
+    resolveCardChoice(
+      `${players[playerIndex].name} bought ${card.title} at ${tile.name} for ${formatMoney(card.price)}. Cash left: ${formatMoney(nextCash[playerIndex])}.`,
+    )
+    return true
   }
 
   function resolveEducationChoice(message: string) {
@@ -1440,186 +1747,10 @@ function App() {
   }
 
   function buyOrUpgradeInvestmentCard(card: BusinessCard, tileId: number) {
-    const result = purchaseBusinessCardForPlayer(currentPlayerIndex, card, tileId)
+    const didBuyOrUpgrade = buyOrUpgradeBusinessCard(card, tileId)
 
-    if (result.success) {
-      resolveInvestmentChoice(result.message)
-      return
-    }
-
-    setStatus(result.message)
-  }
-
-  function getAiBusinessChoice(playerIndex: number, tileId: number) {
-    const playerCash = cashRef.current[playerIndex]
-    const cashReserve = Math.max(
-      aiMinimumCashReserve,
-      Math.round(getRawBusinessIncomeForPlayer(playerIndex) * 0.35),
-    )
-
-    return getBusinessCardsForTile(boardTiles[tileId])
-      .map((card) => {
-        const existingBusiness = businessesRef.current.find(
-          (business) =>
-            business.tileId === tileId &&
-            business.cardId === card.id,
-        )
-
-        if (existingBusiness && existingBusiness.playerIndex !== playerIndex) {
-          return null
-        }
-
-        if (existingBusiness && existingBusiness.level >= maxBusinessLevel) {
-          return null
-        }
-
-        if (playerCash - card.price < cashReserve) {
-          return null
-        }
-
-        const nextLevel = existingBusiness ? existingBusiness.level + 1 : 1
-        const currentIncome = existingBusiness ? getBusinessHoldingIncome(existingBusiness) : 0
-        const nextIncome = getBusinessIncomeAtLevel(card, nextLevel)
-        const incomeGain = nextIncome - currentIncome
-
-        if (incomeGain <= 0) {
-          return null
-        }
-
-        return {
-          card,
-          tileId,
-          incomeGain,
-          score: incomeGain / card.price + (existingBusiness ? 0.005 : 0),
-        }
-      })
-      .filter((choice): choice is NonNullable<typeof choice> => choice !== null)
-      .sort((left, right) => {
-        if (right.score !== left.score) {
-          return right.score - left.score
-        }
-
-        return right.incomeGain - left.incomeGain
-      })[0] ?? null
-  }
-
-  function getAiLandReserve(playerIndex: number) {
-    return Math.max(
-      aiMinimumCashReserve * aiLandCashReserveMultiplier,
-      Math.round(getRawBusinessIncomeForPlayer(playerIndex) * 0.6),
-    )
-  }
-
-  function shouldAiBuyLand(playerIndex: number, tileId: number) {
-    const tile = boardTiles[tileId]
-
-    if (!tile.landPrice || landHoldingsRef.current.some((holding) => holding.tileId === tileId)) {
-      return false
-    }
-
-    const playerCash = cashRef.current[playerIndex]
-    const businessIncome = getRawBusinessIncomeForPlayer(playerIndex)
-    const reserve = getAiLandReserve(playerIndex)
-
-    if (businessIncome < aiLandMinimumBusinessIncome) {
-      return false
-    }
-
-    if (playerCash < tile.landPrice * aiLandMinimumCashMultiple) {
-      return false
-    }
-
-    if (playerCash - tile.landPrice < reserve) {
-      return false
-    }
-
-    const tileBusinesses = businessesRef.current.filter((business) => business.tileId === tileId)
-    const ownBusinessIncome = tileBusinesses
-      .filter((business) => business.playerIndex === playerIndex)
-      .reduce((total, business) => total + getBusinessHoldingIncome(business), 0)
-    const tenantBusinessIncome = tileBusinesses
-      .filter((business) => business.playerIndex !== playerIndex)
-      .reduce((total, business) => total + getBusinessHoldingIncome(business), 0)
-    const landingRentValue = Math.round(tile.landPrice * landRentRate)
-    const leaseValue = Math.round(tenantBusinessIncome * openLeaseShareRate)
-    const strategicValue = ownBusinessIncome > 0 ? Math.round(ownBusinessIncome * 0.04) : 0
-    const projectedValue = landingRentValue + leaseValue + strategicValue
-    const valueRatio = projectedValue / tile.landPrice
-
-    return tenantBusinessIncome > 0 || ownBusinessIncome > 0 || valueRatio >= 0.035
-  }
-
-  async function applyAiLandChoice(playerIndex: number, tileId: number, runId: number) {
-    if (!shouldAiBuyLand(playerIndex, tileId)) {
-      return
-    }
-
-    const result = buyLandForPlayer(playerIndex, tileId)
-    setStatus(
-      result.success
-        ? `AI land buyout: ${result.message}`
-        : `${players[playerIndex].name} skipped land buyout. ${result.message}`,
-    )
-    await wait(aiDelayMs)
-
-    if (runId !== runIdRef.current) {
-      return
-    }
-  }
-
-  async function applyAiBusinessChoice(playerIndex: number, tileId: number, context: string, runId: number) {
-    const choice = getAiBusinessChoice(playerIndex, tileId)
-
-    if (!choice) {
-      setStatus(
-        `${players[playerIndex].name} skipped ${context} at ${boardTiles[tileId].name} to keep cash reserve.`,
-      )
-      await wait(aiDelayMs)
-      return
-    }
-
-    const result = purchaseBusinessCardForPlayer(playerIndex, choice.card, choice.tileId)
-    setStatus(
-      result.success
-        ? `${context}: ${result.message}`
-        : `${players[playerIndex].name} skipped ${context}. ${result.message}`,
-    )
-    await wait(aiDelayMs)
-
-    if (runId !== runIdRef.current) {
-      return
-    }
-  }
-
-  async function applyAiInvestmentBankChoice(playerIndex: number, options: number[], runId: number) {
-    const choice =
-      options
-        .map((tileId) => getAiBusinessChoice(playerIndex, tileId))
-        .filter((option): option is NonNullable<typeof option> => option !== null)
-        .sort((left, right) => {
-          if (right.score !== left.score) {
-            return right.score - left.score
-          }
-
-          return right.incomeGain - left.incomeGain
-        })[0] ?? null
-
-    if (!choice) {
-      setStatus(`${players[playerIndex].name} skipped Investment Bank to keep cash reserve.`)
-      await wait(aiDelayMs)
-      return
-    }
-
-    const result = purchaseBusinessCardForPlayer(playerIndex, choice.card, choice.tileId)
-    setStatus(
-      result.success
-        ? `Investment Bank AI choice: ${result.message}`
-        : `${players[playerIndex].name} skipped Investment Bank. ${result.message}`,
-    )
-    await wait(aiDelayMs)
-
-    if (runId !== runIdRef.current) {
-      return
+    if (didBuyOrUpgrade) {
+      investmentChoiceResolverRef.current?.()
     }
   }
 
@@ -1675,99 +1806,178 @@ function App() {
         effect: card.effect,
       },
     ])
+
+    // 20% Jail Risk check on deal
+    if (rollJailRisk()) {
+      const nextPositions = [...positionsRef.current]
+      nextPositions[playerIndex] = prisonTile
+      updatePositions(nextPositions)
+
+      const nextPrisonTurns = [...prisonTurnsRef.current]
+      nextPrisonTurns[playerIndex] = 2
+      updatePrisonTurns(nextPrisonTurns)
+
+      resolveInfluenceChoice(
+        `🚨 POLICE RAID! ${players[playerIndex].name} bought ${card.title} but got arrested in the raid! Sent to Chonburi Prison for 2 turns!`,
+      )
+      return
+    }
+
     resolveInfluenceChoice(
       `${players[playerIndex].name} bought ${card.title} for ${formatMoney(finalPrice)}${discount > 0 ? ` after ${formatMoney(discount)} Prison Contact discount` : ''}. It is now in their hand (${playerCards.length + 1}/${maxInfluenceCards}).`,
     )
   }
 
-  function removeInfluenceCard(cardId: string) {
-    updateInfluenceHoldings(
-      influenceHoldingsRef.current.filter((holding) => holding.id !== cardId),
-    )
-    setInventoryDetail(null)
-  }
+  function buyInfluenceCardForAI(aiIndex: number, card: InfluenceCard) {
+    const aiCards = influenceHoldingsRef.current.filter((h) => h.playerIndex === aiIndex)
+    if (aiCards.length >= maxInfluenceCards) return
 
-  function resolveInfluenceJailRisk(playerIndex: number) {
-    if (!rollInfluenceJailRisk()) {
-      return ' Jail risk did not trigger.'
+    const hasCoupon = prisonContactCouponsRef.current[aiIndex]
+    const discount = hasCoupon ? Math.round(card.price * prisonContactDiscountRate) : 0
+    const finalPrice = card.price - discount
+
+    if (cashRef.current[aiIndex] < finalPrice) return
+
+    const nextCash = [...cashRef.current]
+    nextCash[aiIndex] -= finalPrice
+    updateCash(nextCash)
+
+    if (hasCoupon) {
+      const nextCoupons = [...prisonContactCouponsRef.current]
+      nextCoupons[aiIndex] = false
+      updatePrisonContactCoupons(nextCoupons)
     }
 
-    const nextPositions = [...positionsRef.current]
-    nextPositions[playerIndex] = prisonTile
-    updatePositions(nextPositions)
+    influenceCardIdRef.current += 1
+    updateInfluenceHoldings([
+      ...influenceHoldingsRef.current,
+      {
+        id: `${aiIndex}-${card.id}-${influenceCardIdRef.current}`,
+        playerIndex: aiIndex,
+        cardId: card.id,
+        title: card.title,
+        pricePaid: finalPrice,
+        risk: card.risk,
+        description: card.description,
+        effect: card.effect,
+      },
+    ])
 
-    const nextPrisonTurns = [...prisonTurnsRef.current]
-    nextPrisonTurns[playerIndex] = Math.max(nextPrisonTurns[playerIndex], influenceJailTurns)
-    updatePrisonTurns(nextPrisonTurns)
+    if (rollJailRisk()) {
+      const nextPositions = [...positionsRef.current]
+      nextPositions[aiIndex] = prisonTile
+      updatePositions(nextPositions)
 
-    return ` Jail risk triggered: ${players[playerIndex].name} was sent to ${boardTiles[prisonTile].name} for ${influenceJailTurns} skipped turns.`
-  }
+      const nextPrisonTurns = [...prisonTurnsRef.current]
+      nextPrisonTurns[aiIndex] = 2
+      updatePrisonTurns(nextPrisonTurns)
 
-  function applyInfluenceCard(card: InfluenceHolding) {
-    if (players[card.playerIndex].role !== 'Human') {
-      setStatus('AI influence cards are manual-view only in Demo 1.')
+      setStatus(
+        `🚨 POLICE RAID! ${players[aiIndex].name} bought ${card.title} but got arrested! Sent to Chonburi Prison for 2 turns!`,
+      )
       return
     }
 
-    if (phase !== 'ready') {
-      setStatus('Finish the current turn before using an influence card.')
+    setStatus(
+      `${players[aiIndex].name} bought ${card.title} from Local Power Broker for ${formatMoney(finalPrice)}.`,
+    )
+  }
+
+  function removeInfluenceHolding(cardId: string) {
+    updateInfluenceHoldings(
+      influenceHoldingsRef.current.filter((holding) => holding.id !== cardId),
+    )
+  }
+
+  function playInfluenceCard(card: InfluenceHolding) {
+    if (card.playerIndex !== 0) {
+      setStatus('Only Player can use influence cards in Demo 1.')
       return
     }
 
     if (card.effect === 'eviction') {
-      const hasTarget = businessesRef.current.some(
-        (business) => business.playerIndex !== card.playerIndex,
-      )
+      const hasTargets = businessesRef.current.some((business) => business.playerIndex !== card.playerIndex)
 
-      if (!hasTarget) {
-        setStatus('Influence Eviction needs at least one rival business on the board.')
+      if (!hasTargets) {
+        setStatus('Influence Eviction has no rival business target right now.')
         return
       }
 
-      setEvictionCard(card)
+      setEvictionCardId(card.id)
       setInventoryDetail(null)
-      setStatus('Choose one rival business to force closed.')
+      setStatus('Influence Eviction: choose one rival business to remove.')
       return
     }
 
     if (card.effect === 'leasePressure') {
-      updateLeasePressurePlayers(
-        leasePressurePlayersRef.current.map((isPressured, playerIndex) =>
-          playerIndex === card.playerIndex ? true : isPressured,
-        ),
-      )
-      removeInfluenceCard(card.id)
-      const riskText = resolveInfluenceJailRisk(card.playerIndex)
+      const nextLeasePressurePlayers = [...leasePressurePlayersRef.current]
+      nextLeasePressurePlayers[card.playerIndex] = true
+      updateLeasePressurePlayers(nextLeasePressurePlayers)
+      removeInfluenceHolding(card.id)
+      setInventoryDetail(null)
       setStatus(
-        `${players[card.playerIndex].name} used Lease Pressure. Their next Open Lease collection is 20% instead of 10%.${riskText}`,
+        `${players[card.playerIndex].name} used Lease Pressure. Their next Open Lease collection uses ${Math.round(openLeaseShareRate * 200)}%.`,
       )
       return
     }
 
-    influenceCardIdRef.current += 1
+    if (card.effect === 'taxRelief') {
+      const nextTaxRelief = [...taxReliefTurnsRef.current]
+      nextTaxRelief[card.playerIndex] += 3
+      updateTaxReliefTurns(nextTaxRelief)
+      removeInfluenceHolding(card.id)
+      setInventoryDetail(null)
+      setStatus(
+        `🛡 ${players[card.playerIndex].name} activated Tax Relief! Rent immunity for next 3 landings on rival land.`,
+      )
+      return
+    }
+
+    if (card.effect === 'zoningPermit') {
+      const playerBusinesses = businessesRef.current.filter(
+        (b) => b.playerIndex === card.playerIndex && b.level < maxBusinessLevel,
+      )
+
+      if (playerBusinesses.length === 0) {
+        setStatus('Zoning Permit requires at least 1 upgradable business owned by you.')
+        return
+      }
+
+      setZoningPermitCardId(card.id)
+      setInventoryDetail(null)
+      setStatus('Zoning Permit: Choose one of your businesses to upgrade by +1 level for free.')
+      return
+    }
+
+    const nextModifiers = incomeModifiersRef.current.filter(
+      (modifier) => modifier.id !== `port-connection-${card.id}`,
+    )
     updateIncomeModifiers([
-      ...incomeModifiersRef.current,
+      ...nextModifiers,
       {
-        id: `${card.playerIndex}-${card.id}-port-${influenceCardIdRef.current}`,
+        id: `port-connection-${card.id}`,
         eventTitle: 'Port Connection',
         playerIndex: card.playerIndex,
         multiplier: 1.4,
         scope: 'industrial',
       },
     ])
-    removeInfluenceCard(card.id)
-    const riskText = resolveInfluenceJailRisk(card.playerIndex)
+    removeInfluenceHolding(card.id)
+    setInventoryDetail(null)
     setStatus(
-      `${players[card.playerIndex].name} used Port Connection. Industrial and port income is 140% on the next tile 00 income collection.${riskText}`,
+      `${players[card.playerIndex].name} used Port Connection. Industrial and port income pays 140% on the next income collection.`,
     )
   }
 
-  function evictBusiness(card: InfluenceHolding, businessId: string) {
-    const targetBusiness = businessesRef.current.find((business) => business.id === businessId)
+  function resolveInfluenceEviction(targetBusinessId: string) {
+    const card = influenceHoldingsRef.current.find((holding) => holding.id === evictionCardId)
+    const targetBusiness = businessesRef.current.find(
+      (business) => business.id === targetBusinessId,
+    )
 
-    if (!targetBusiness || targetBusiness.playerIndex === card.playerIndex) {
-      setStatus('That business can no longer be evicted.')
-      setEvictionCard(null)
+    if (!card || !targetBusiness || targetBusiness.playerIndex === card.playerIndex) {
+      setEvictionCardId(null)
+      setStatus('Influence Eviction could not find a valid target.')
       return
     }
 
@@ -1775,12 +1985,41 @@ function App() {
     const nextCash = [...cashRef.current]
     nextCash[targetBusiness.playerIndex] += refund
     updateCash(nextCash)
-    updateBusinesses(businessesRef.current.filter((business) => business.id !== businessId))
-    removeInfluenceCard(card.id)
-    setEvictionCard(null)
-    const riskText = resolveInfluenceJailRisk(card.playerIndex)
+    updateBusinesses(
+      businessesRef.current.filter((business) => business.id !== targetBusiness.id),
+    )
+    removeInfluenceHolding(card.id)
+    setEvictionCardId(null)
     setStatus(
-      `${players[card.playerIndex].name} used Influence Eviction on ${players[targetBusiness.playerIndex].name}'s ${targetBusiness.title} at ${boardTiles[targetBusiness.tileId].name}. The owner recovered ${formatMoney(refund)}.${riskText}`,
+      `${players[card.playerIndex].name} used Influence Eviction on ${targetBusiness.title} at ${boardTiles[targetBusiness.tileId].name}. ${players[targetBusiness.playerIndex].name} received ${formatMoney(refund)} refund.`,
+    )
+  }
+
+  function resolveZoningPermitUpgrade(businessId: string) {
+    const cardHolding = influenceHoldingsRef.current.find((h) => h.id === zoningPermitCardId)
+    const targetBusiness = businessesRef.current.find((b) => b.id === businessId)
+
+    if (!cardHolding || !targetBusiness || targetBusiness.level >= maxBusinessLevel) {
+      setZoningPermitCardId(null)
+      setStatus('Zoning Permit upgrade cancelled.')
+      return
+    }
+
+    const nextBusinesses = businessesRef.current.map((b) => {
+      if (b.id === targetBusiness.id) {
+        return {
+          ...b,
+          level: b.level + 1,
+        }
+      }
+      return b
+    })
+
+    updateBusinesses(nextBusinesses)
+    removeInfluenceHolding(cardHolding.id)
+    setZoningPermitCardId(null)
+    setStatus(
+      `🏛 Zoning Permit used! ${targetBusiness.title} at ${boardTiles[targetBusiness.tileId].name} upgraded to Level ${targetBusiness.level + 1} for free!`,
     )
   }
 
@@ -1796,25 +2035,7 @@ function App() {
     setStatus('Investment Bank: choose another investment tile, or skip.')
   }
 
-  function getStudyTuition(activeStudy: Exclude<ActiveStudy, 'none'>) {
-    return educationTuition[activeStudy]
-  }
-
   function startStudy(activeStudy: Exclude<ActiveStudy, 'none'>) {
-    const playerIndex = educationPlayerIndex ?? currentPlayerIndex
-    const tuition = getStudyTuition(activeStudy)
-    const playerCash = cashRef.current[playerIndex]
-
-    if (playerCash < tuition) {
-      setStatus(
-        `${players[playerIndex].name} needs ${formatMoney(tuition)} for ${activeStudy === 'bachelor' ? 'bachelor study' : 'master degree'} but only has ${formatMoney(playerCash)}.`,
-      )
-      return
-    }
-
-    const nextCash = [...cashRef.current]
-    nextCash[playerIndex] -= tuition
-    updateCash(nextCash)
     updateEducation({
       stage: educationRef.current.stage,
       activeStudy,
@@ -1822,8 +2043,8 @@ function App() {
     })
     resolveEducationChoice(
       activeStudy === 'bachelor'
-        ? `${players[playerIndex].name} paid ${formatMoney(tuition)} and started bachelor study at Burapha University. Skip ${studySkipTurns} turns, then business income becomes +${educationIncomeBonus.bachelorCompleted}%. Cash left: ${formatMoney(nextCash[playerIndex])}.`
-        : `${players[playerIndex].name} paid ${formatMoney(tuition)} and started master degree at Burapha University. Skip ${studySkipTurns} turns, then business income becomes +${educationIncomeBonus.masterCompleted}%. Cash left: ${formatMoney(nextCash[playerIndex])}.`,
+        ? `Player started bachelor study at Burapha University. Skip ${studySkipTurns} turns, then business income becomes +${educationIncomeBonus.bachelorCompleted}%.`
+        : `Player started master degree at Burapha University. Skip ${studySkipTurns} turns, then business income becomes +${educationIncomeBonus.masterCompleted}%.`,
     )
   }
 
@@ -1844,7 +2065,6 @@ function App() {
       skipTurns: 0,
     })
     setBuraphaChoice(null)
-    setEducationPlayerIndex(null)
     updateInvestmentVisits(players.map(() => 0))
     updateCash(players.map(() => startingCash))
     updateBusinesses([])
@@ -1855,64 +2075,22 @@ function App() {
     updatePrisonContactCoupons(players.map(() => false))
     updateInfluenceHoldings([])
     updateLeasePressurePlayers(players.map(() => false))
+    updateTaxReliefTurns(players.map(() => 0))
+    setZoningPermitCardId(null)
     setInvestmentOffer(null)
     setSelectedInvestmentTile(null)
     setSelectedLandTile(null)
     setSelectedPoliticalEvent(null)
     setInfluenceOffer([])
-    setEvictionCard(null)
+    setEvictionCardId(null)
+    setWinnerIndex(null)
     setCurrentPlayerIndex(0)
     setInventoryDetail(null)
     setIsNetWorthOpen(false)
-    setIsWinnerDismissed(false)
-    setIsDevMode(false)
     setPhase('ready')
     setLatestRoll(null)
     setStatus('Game reset. Roll to start the round.')
     setRollHistory([])
-  }
-
-  function clampInvestmentModalOffset(x: number, y: number) {
-    const maxX = Math.max(120, window.innerWidth / 2 - 120)
-    const maxY = Math.max(90, window.innerHeight / 2 - 90)
-
-    return {
-      x: Math.max(-maxX, Math.min(maxX, x)),
-      y: Math.max(-maxY, Math.min(maxY, y)),
-    }
-  }
-
-  function startInvestmentModalDrag(event: PointerEvent<HTMLDivElement>) {
-    event.preventDefault()
-    event.currentTarget.setPointerCapture(event.pointerId)
-    investmentModalDragRef.current = {
-      pointerId: event.pointerId,
-      startX: event.clientX,
-      startY: event.clientY,
-      originX: investmentModalOffset.x,
-      originY: investmentModalOffset.y,
-    }
-  }
-
-  function moveInvestmentModal(event: PointerEvent<HTMLDivElement>) {
-    const drag = investmentModalDragRef.current
-
-    if (!drag || drag.pointerId !== event.pointerId) {
-      return
-    }
-
-    setInvestmentModalOffset(
-      clampInvestmentModalOffset(
-        drag.originX + event.clientX - drag.startX,
-        drag.originY + event.clientY - drag.startY,
-      ),
-    )
-  }
-
-  function stopInvestmentModalDrag(event: PointerEvent<HTMLDivElement>) {
-    if (investmentModalDragRef.current?.pointerId === event.pointerId) {
-      investmentModalDragRef.current = null
-    }
   }
 
   const primaryButtonText =
@@ -1938,10 +2116,10 @@ function App() {
                         ? 'Buy Land'
                         : phase === 'influence-choice'
                           ? 'Choose Influence'
-                          : 'Skip Move'
+                          : phase === 'game-over'
+                            ? 'Game Over'
+                            : 'Skip Move'
   const activeTile = boardTiles[positions[currentPlayerIndex]]
-  const isInvestmentModalPhase =
-    phase === 'investment-choice' || phase === 'investment-card-choice'
   const selectedLandTileData = selectedLandTile === null ? null : boardTiles[selectedLandTile]
   const selectedLandHolding =
     selectedLandTile === null ? undefined : landHoldingByTile[selectedLandTile]
@@ -1962,62 +2140,46 @@ function App() {
       total + Math.round(getBusinessHoldingIncome(business) * openLeaseShareRate),
     0,
   )
-  const selectedLandRentDue = selectedLandTileData?.landPrice
-    ? Math.round(selectedLandTileData.landPrice * landRentRate)
-    : 0
-  const selectedLandOwnerName = selectedLandHolding
-    ? players[selectedLandHolding.playerIndex].name
-    : 'Unowned'
-  const selectedLandRentRuleText = selectedLandTileData?.landPrice
-    ? `${Math.round(landRentRate * 100)}% of land price = ${formatMoney(selectedLandRentDue)}`
-    : 'No rent rule on this tile'
   const businessCards = getBusinessCardsForTile(activeTile)
-  const businessesOnActiveTile = businesses.filter((business) => business.tileId === activeTile.id)
+  const currentPlayerBusinessesOnActiveTile = businesses.filter(
+    (business) =>
+      business.playerIndex === currentPlayerIndex && business.tileId === activeTile.id,
+  )
+  const activeTilePolicyBlock = getLandPolicyBlockFromHoldings(
+    activeTile.id,
+    currentPlayerIndex,
+    landHoldings,
+  )
   const selectedInvestmentTileData =
     selectedInvestmentTile === null ? null : boardTiles[selectedInvestmentTile]
   const investmentBusinessCards = selectedInvestmentTileData
     ? getBusinessCardsForTile(selectedInvestmentTileData)
     : []
-  const businessesOnInvestmentTile =
+  const selectedInvestmentTilePolicyBlock =
+    selectedInvestmentTile === null
+      ? null
+      : getLandPolicyBlockFromHoldings(
+          selectedInvestmentTile,
+          currentPlayerIndex,
+          landHoldings,
+        )
+  const currentPlayerBusinessesOnInvestmentTile =
     selectedInvestmentTile === null
       ? []
-      : businesses.filter((business) => business.tileId === selectedInvestmentTile)
-  const netWorthRows = players
-    .map((player, playerIndex) => {
-      const playerBusinesses = businesses.filter(
-        (business) => business.playerIndex === playerIndex,
-      )
-      const businessValue = playerBusinesses.reduce(
-        (total, business) => total + business.pricePaid,
-        0,
-      )
-      const landValue = landHoldings
-        .filter((holding) => holding.playerIndex === playerIndex)
-        .reduce((total, holding) => total + holding.pricePaid, 0)
-      const influenceValue = influenceHoldings
-        .filter((holding) => holding.playerIndex === playerIndex)
-        .reduce((total, holding) => total + holding.pricePaid, 0)
-      const income = playerBusinesses.reduce(
-        (total, business) => total + getBusinessHoldingIncome(business),
-        0,
-      )
-      const total = cash[playerIndex] + businessValue + landValue + influenceValue
-
-      return {
-        player,
-        playerIndex,
-        cash: cash[playerIndex],
-        businessValue,
-        landValue,
-        influenceValue,
-        income,
-        total,
-      }
-    })
-    .sort((a, b) => b.total - a.total)
-  const winnerRow =
-    !isWinnerDismissed && netWorthRows[0]?.total >= netWorthWinTarget ? netWorthRows[0] : null
-
+      : businesses.filter(
+          (business) =>
+            business.playerIndex === currentPlayerIndex &&
+            business.tileId === selectedInvestmentTile,
+        )
+  const netWorthRows = getNetWorthRowsFromState(
+    cash,
+    businesses,
+    landHoldings,
+    influenceHoldings,
+  )
+  const winnerRow = winnerIndex === null
+    ? null
+    : netWorthRows.find((row) => row.playerIndex === winnerIndex) ?? null
   const selectedPlayer = players[selectedPlayerIndex]
   const selectedPlayerBusinesses = businesses.filter(
     (business) => business.playerIndex === selectedPlayerIndex,
@@ -2035,54 +2197,6 @@ function App() {
     (total, business) => total + getBusinessHoldingIncome(business),
     0,
   )
-  const selectedPlayerIncomeModifiersForPreview = incomeModifiers.filter(
-    (modifier) => modifier.playerIndex === selectedPlayerIndex,
-  )
-  const selectedPlayerBusinessIncomesAtBank = selectedPlayerBusinesses.map((business) => {
-    const baseIncome = getBusinessHoldingIncome(business)
-    const modifiedIncome = selectedPlayerIncomeModifiersForPreview
-      .filter((modifier) => isBusinessInScope(business, modifier.scope))
-      .reduce((income, modifier) => Math.round(income * modifier.multiplier), baseIncome)
-
-    return {
-      business,
-      income: modifiedIncome,
-    }
-  })
-  const selectedPlayerBusinessIncomeAtBank = selectedPlayerBusinessIncomesAtBank.reduce(
-    (total, item) => total + item.income,
-    0,
-  )
-  const selectedPlayerEducationBonusRate =
-    selectedPlayer.role === 'Human' && education.stage === 'masterCompleted'
-      ? educationIncomeBonus.masterCompleted / 100
-      : selectedPlayer.role === 'Human' && education.stage === 'bachelorCompleted'
-        ? educationIncomeBonus.bachelorCompleted / 100
-        : 0
-  const selectedPlayerEducationBonusAtBank = Math.round(
-    selectedPlayerBusinessIncomeAtBank * selectedPlayerEducationBonusRate,
-  )
-  const selectedPlayerLeaseShareTotalAtBank = selectedPlayerBusinessIncomesAtBank.reduce(
-    (total, item) => {
-      const landHolding = landHoldings.find((holding) => holding.tileId === item.business.tileId)
-
-      if (!landHolding || landHolding.playerIndex === selectedPlayerIndex) {
-        return total
-      }
-
-      const rate = leasePressurePlayers[landHolding.playerIndex]
-        ? openLeaseShareRate * 2
-        : openLeaseShareRate
-
-      return total + Math.round(item.income * rate)
-    },
-    0,
-  )
-  const selectedPlayerEstimatedBankIncome =
-    passStartIncome +
-    selectedPlayerBusinessIncomeAtBank +
-    selectedPlayerEducationBonusAtBank -
-    selectedPlayerLeaseShareTotalAtBank
   const selectedPrisonStatus =
     prisonTurns[selectedPlayerIndex] > 0
       ? `In prison: ${prisonTurns[selectedPlayerIndex]} skipped turns left`
@@ -2102,6 +2216,21 @@ function App() {
     inventoryDetail?.kind === 'influence'
       ? selectedPlayerInfluenceCards.find((card) => card.id === inventoryDetail.id)
       : null
+  const canUseSelectedInfluence =
+    Boolean(selectedInventoryInfluence) && selectedInventoryInfluence?.playerIndex === 0
+  const evictionCard = evictionCardId === null
+    ? null
+    : influenceHoldings.find((holding) => holding.id === evictionCardId) ?? null
+  const evictionTargets = evictionCard
+    ? businesses.filter(
+        (business) =>
+          business.playerIndex !== evictionCard.playerIndex &&
+          !noCardTiles.has(business.tileId),
+      )
+    : []
+  const selectedPlayerLeasePressureStatus = leasePressurePlayers[selectedPlayerIndex]
+    ? `Lease Pressure ready: next Open Lease collection uses ${Math.round(openLeaseShareRate * 200)}%`
+    : 'No lease pressure'
   const selectedInventoryBusinessTile = selectedInventoryBusiness
     ? boardTiles[selectedInventoryBusiness.tileId]
     : null
@@ -2128,15 +2257,10 @@ function App() {
       total + Math.round(getBusinessHoldingIncome(business) * openLeaseShareRate),
     0,
   )
-  const bachelorTuition = getStudyTuition('bachelor')
-  const masterTuition = getStudyTuition('master')
-  const activeEducationPlayerIndex = educationPlayerIndex ?? currentPlayerIndex
-  const activeEducationCash = cash[activeEducationPlayerIndex]
-  const canAffordBachelorStudy = activeEducationCash >= bachelorTuition
-  const canAffordMasterStudy = activeEducationCash >= masterTuition
-  const evictionTargets = evictionCard
-    ? businesses.filter((business) => business.playerIndex !== evictionCard.playerIndex)
-    : []
+  const canCurrentPlayerEditSelectedLandPolicy =
+    Boolean(selectedLandHolding) && selectedLandHolding?.playerIndex === currentPlayerIndex
+  const canCurrentPlayerEditInventoryLandPolicy =
+    Boolean(selectedInventoryLand) && selectedInventoryLand?.playerIndex === currentPlayerIndex
   const selectedEducationStatus =
     selectedPlayer.role === 'Human'
       ? education.activeStudy === 'bachelor'
@@ -2151,41 +2275,25 @@ function App() {
       : 'No education track'
 
   return (
-    <main className={`game-shell ${isLedgerVisible ? '' : 'board-focus'}`}>
-      <button
-        className="ledger-toggle"
-        type="button"
-        onClick={() => setIsLedgerVisible((value) => !value)}
-      >
-        {isLedgerVisible ? 'Hide Info' : 'Show Info'}
-      </button>
-
-      <div className={`game-layout ${isLedgerVisible ? '' : 'ledger-collapsed'}`}>
+    <main className="game-shell">
+      <div className="game-layout">
         <section className="board" aria-label="Monopoly style board prototype">
           {Array.from({ length: tileCount }, (_, tile) => {
             const occupants = tileOccupants[tile] ?? []
             const tileBusinesses = businessesByTile[tile] ?? []
-            const tileBusinessMarkers = Object.values(
-              tileBusinesses.reduce<
-                Record<number, { playerIndex: number; count: number; maxLevel: number; titles: string[] }>
-              >((groups, business) => {
-                const current = groups[business.playerIndex] ?? {
-                  playerIndex: business.playerIndex,
-                  count: 0,
-                  maxLevel: 0,
-                  titles: [],
-                }
+            const tileBusinessMarkers = tileBusinesses.reduce<
+              Record<number, { count: number; maxLevel: number; owner: Player }>
+            >((markers, business) => {
+              const existingMarker = markers[business.playerIndex]
 
-                groups[business.playerIndex] = {
-                  playerIndex: business.playerIndex,
-                  count: current.count + 1,
-                  maxLevel: Math.max(current.maxLevel, business.level),
-                  titles: [...current.titles, `${business.title} Lv.${business.level}`],
-                }
+              markers[business.playerIndex] = {
+                count: (existingMarker?.count ?? 0) + 1,
+                maxLevel: Math.max(existingMarker?.maxLevel ?? 0, business.level),
+                owner: players[business.playerIndex],
+              }
 
-                return groups
-              }, {}),
-            )
+              return markers
+            }, {})
             const landHolding = landHoldingByTile[tile]
             const isCorner = tile === 0 || tile === 10 || tile === 20 || tile === 30
             const tileData = boardTiles[tile]
@@ -2210,21 +2318,19 @@ function App() {
                     Owner {players[landHolding.playerIndex].name}
                   </span>
                 )}
-                {tileBusinessMarkers.length > 0 && (
+                {tileBusinesses.length > 0 && (
                   <div className="business-markers" aria-label={`Businesses on ${tileData.name}`}>
-                    {tileBusinessMarkers.map((marker) => {
-                      const owner = players[marker.playerIndex]
-
-                      return (
+                    {Object.entries(tileBusinessMarkers).map(
+                      ([playerIndex, marker]) => (
                         <span
-                          className={`business-marker ${owner.colorClass}`}
-                          key={`${tile}-${marker.playerIndex}`}
-                          title={`${owner.name}: ${marker.titles.join(', ')}`}
+                          className={`business-marker ${marker.owner.colorClass}`}
+                          key={`${tile}-${playerIndex}`}
+                          title={`${marker.owner.name}: ${marker.count} business${marker.count > 1 ? 'es' : ''}, max level ${marker.maxLevel}`}
                         >
-                          {marker.count > 1 ? `${marker.count}x` : marker.maxLevel}
+                          {marker.maxLevel}
                         </span>
-                      )
-                    })}
+                      ),
+                    )}
                   </div>
                 )}
                 <div className="tokens">
@@ -2265,6 +2371,7 @@ function App() {
             className="primary-action"
             type="button"
             disabled={
+              phase === 'game-over' ||
               phase === 'card-choice' ||
               phase === 'education-choice' ||
               phase === 'study-skip' ||
@@ -2280,23 +2387,22 @@ function App() {
             {primaryButtonText}
           </button>
 
-          <div className="console-actions">
-            <button className="secondary-action" type="button" onClick={resetGame}>
-              Reset
-            </button>
-            <button className="secondary-action" type="button" onClick={() => setIsDevMode((value) => !value)}>
-              {isDevMode ? 'Dev On' : 'Dev Mode'}
-            </button>
-          </div>
+          <button
+            className={`dev-mode-toggle ${devMode ? 'active' : ''}`}
+            type="button"
+            onClick={() => setDevMode(!devMode)}
+          >
+            🛠 Dev Mode: {devMode ? 'ON' : 'OFF'}
+          </button>
 
-          {isDevMode && (
-            <div className="dev-tools">
+          {devMode && (
+            <>
               <div className="test-move-panel" aria-label="Prototype test move controls">
                 <span>Test Move</span>
                 <div>
                   {testMoveOptions.map((steps) => (
                     <button
-                      disabled={phase !== 'ready'}
+                      disabled={phase !== 'ready' || winnerIndex !== null}
                       key={steps}
                       type="button"
                       onClick={() => handleTestMove(steps)}
@@ -2311,17 +2417,30 @@ function App() {
                 <span>Dev Cash</span>
                 <div>
                   {devCashOptions.map((amount) => (
-                    <button key={amount} type="button" onClick={() => addDevCashToPlayer(amount)}>
+                    <button
+                      disabled={winnerIndex !== null}
+                      key={amount}
+                      type="button"
+                      onClick={() => addDevCashToPlayer(amount)}
+                    >
                       +{amount >= 1000000 ? '1M' : `${amount / 1000}K`}
                     </button>
                   ))}
-                  <button type="button" onClick={() => addDevCashToAll(devAllCashAmount)}>
+                  <button
+                    disabled={winnerIndex !== null}
+                    type="button"
+                    onClick={() => addDevCashToAll(devAllCashAmount)}
+                  >
                     All +500K
                   </button>
                 </div>
               </div>
-            </div>
+            </>
           )}
+
+          <button className="secondary-action" type="button" onClick={resetGame}>
+            Reset
+          </button>
 
           <p className="status-text">{status}</p>
 
@@ -2331,7 +2450,7 @@ function App() {
           </div>
 
           <button className="net-worth-button" type="button" onClick={() => setIsNetWorthOpen(true)}>
-            <span>Net Worth</span>
+            <span>Net Worth / Target {formatCompactMoney(targetNetWorth)}</span>
             <strong>{players[netWorthRows[0].playerIndex].name}</strong>
             <em>{formatMoney(netWorthRows[0].total)}</em>
           </button>
@@ -2344,11 +2463,7 @@ function App() {
           </div>
         </section>
 
-        <aside
-          aria-hidden={!isLedgerVisible}
-          className={`player-ledger ${isLedgerVisible ? '' : 'is-hidden'}`}
-          aria-label="Player details"
-        >
+        <aside className="player-ledger" aria-label="Player details">
           <div className="player-tabs" role="tablist" aria-label="Players">
             {players.map((player, index) => (
               <button
@@ -2375,70 +2490,48 @@ function App() {
                 <span>{selectedPlayer.role}</span>
                 <strong>{selectedPlayer.name}</strong>
               </div>
-            </div>
-
-            <div className="ledger-stats">
-              <div>
-                <span>Cash</span>
-                <strong>{formatMoney(cash[selectedPlayerIndex])}</strong>
-              </div>
-              <div>
-                <span>Business income</span>
-                <strong>{formatMoney(selectedPlayerIncome)}</strong>
-              </div>
-            </div>
-
-            <div className="ledger-section">
-              <span>Education</span>
-              <strong>{selectedEducationStatus}</strong>
-            </div>
-
-            <div className="ledger-section income-breakdown">
-              <span>Estimated Tile 00 Income</span>
-              <strong>{formatMoney(selectedPlayerEstimatedBankIncome)}</strong>
-              <div>
-                <span>Base</span>
-                <em>{formatMoney(passStartIncome)}</em>
-              </div>
-              <div>
-                <span>Business</span>
-                <em>{formatMoney(selectedPlayerBusinessIncomeAtBank)}</em>
-              </div>
-              <div>
-                <span>Education bonus</span>
-                <em>+{formatMoney(selectedPlayerEducationBonusAtBank)}</em>
-              </div>
-              <div>
-                <span>Open Lease paid</span>
-                <em>-{formatMoney(selectedPlayerLeaseShareTotalAtBank)}</em>
-              </div>
+              <dl className="player-quick-stats">
+                <div>
+                  <dt>Cash</dt>
+                  <dd>{formatMoney(cash[selectedPlayerIndex])}</dd>
+                </div>
+                <div>
+                  <dt>Income</dt>
+                  <dd>{formatMoney(selectedPlayerIncome)}</dd>
+                </div>
+                <div className="education-stat">
+                  <dt>Education</dt>
+                  <dd>{selectedEducationStatus}</dd>
+                </div>
+              </dl>
             </div>
 
             <div className="ledger-section">
               <span>Next Income Event</span>
-              {selectedPlayerIncomeModifiers.length === 0 && !leasePressurePlayers[selectedPlayerIndex] ? (
+              {selectedPlayerIncomeModifiers.length === 0 ? (
                 <p>No active event.</p>
               ) : (
-                <>
-                  {selectedPlayerIncomeModifiers.map((modifier) => (
-                    <p key={modifier.id}>
-                      {modifier.eventTitle}: {Math.round(modifier.multiplier * 100)}% on {modifier.scope}
-                    </p>
-                  ))}
-                  {leasePressurePlayers[selectedPlayerIndex] && (
-                    <p>Lease Pressure: next Open Lease collection is 20%</p>
-                  )}
-                </>
+                selectedPlayerIncomeModifiers.map((modifier) => (
+                  <p key={modifier.id}>
+                    {modifier.eventTitle}: {Math.round(modifier.multiplier * 100)}% on {modifier.scope}
+                  </p>
+                ))
+              )}
+              {leasePressurePlayers[selectedPlayerIndex] && (
+                <p>{selectedPlayerLeasePressureStatus}</p>
+              )}
+              {taxReliefTurns[selectedPlayerIndex] > 0 && (
+                <p>🛡 Tax Relief: {taxReliefTurns[selectedPlayerIndex]} rent immunity charge(s) left</p>
               )}
             </div>
 
             <div className="inventory-panel" aria-label={`${selectedPlayer.name} card inventory`}>
-              <section className="inventory-section property-inventory-section">
+              <section className="inventory-section">
                 <div className="inventory-heading">
                   <span>Property Cards</span>
                   <strong>{selectedPlayerBusinesses.length + selectedPlayerLandHoldings.length}</strong>
                 </div>
-                <div className="mini-card-list property-card-list">
+                <div className="mini-card-list property-card-grid">
                   {selectedPlayerBusinesses.map((business) => (
                     <button
                       className="mini-card business-mini-card"
@@ -2450,7 +2543,7 @@ function App() {
                       <span>
                         {boardTiles[business.tileId].id.toString().padStart(2, '0')} | Lv.{business.level}
                       </span>
-                      <em>{formatMoney(getBusinessHoldingIncome(business))} / round</em>
+                      <em>{formatMoney(getBusinessHoldingIncome(business))}</em>
                     </button>
                   ))}
                   {selectedPlayerLandHoldings.map((holding) => (
@@ -2462,7 +2555,7 @@ function App() {
                     >
                       <strong>{boardTiles[holding.tileId].name}</strong>
                       <span>{boardTiles[holding.tileId].id.toString().padStart(2, '0')} | Land</span>
-                      <em>{formatMoney(holding.pricePaid)}</em>
+                      <em>{landPolicyLabels[holding.policy]}</em>
                     </button>
                   ))}
                   {selectedPlayerBusinesses.length === 0 && selectedPlayerLandHoldings.length === 0 && (
@@ -2549,49 +2642,21 @@ function App() {
           phase === 'land-choice' ||
           phase === 'influence-choice') && (
           <div className="choice-modal-backdrop">
-            <div
-              className={`choice-modal ${isInvestmentModalPhase ? 'draggable-choice-modal' : ''}`}
-              role="dialog"
-              aria-modal="true"
-              style={
-                isInvestmentModalPhase
-                  ? {
-                      transform: `translate(${investmentModalOffset.x}px, ${investmentModalOffset.y}px)`,
-                    }
-                  : undefined
-              }
-            >
-          {isInvestmentModalPhase && (
-            <div
-              aria-label="Drag investment window"
-              className="modal-drag-handle"
-              onPointerCancel={stopInvestmentModalDrag}
-              onPointerDown={startInvestmentModalDrag}
-              onPointerMove={moveInvestmentModal}
-              onPointerUp={stopInvestmentModalDrag}
-              role="button"
-              tabIndex={0}
-              title="Drag to move this window"
-            >
-              <span>Move window</span>
-              <strong>Drag to view the board</strong>
-            </div>
-          )}
+            <div className="choice-modal" role="dialog" aria-modal="true">
           {phase === 'card-choice' && (
             <div className="card-choice" aria-label="Action card choices">
               <span>Choose one business card</span>
               <div className="action-cards">
                 {businessCards.map((card) => {
-                  const existingBusiness = businessesOnActiveTile.find(
+                  const existingBusiness = currentPlayerBusinessesOnActiveTile.find(
                     (business) => business.cardId === card.id,
                   )
-                  const isOwnedByCurrentPlayer = existingBusiness?.playerIndex === currentPlayerIndex
-                  const isOwnedByRival = Boolean(existingBusiness && !isOwnedByCurrentPlayer)
                   const nextLevel = existingBusiness ? existingBusiness.level + 1 : 1
                   const isMaxLevel = Boolean(
                     existingBusiness && existingBusiness.level >= maxBusinessLevel,
                   )
                   const canAfford = cash[currentPlayerIndex] >= card.price
+                  const isPolicyBlocked = Boolean(activeTilePolicyBlock)
                   const nextIncome = getBusinessIncomeAtLevel(
                     card,
                     Math.min(nextLevel, maxBusinessLevel),
@@ -2600,25 +2665,15 @@ function App() {
                   return (
                     <button
                       className="action-card"
-                      disabled={!canAfford || isMaxLevel || isOwnedByRival}
+                      disabled={!canAfford || isMaxLevel || isPolicyBlocked}
                       key={card.id}
                       type="button"
                       onClick={() => buyOrUpgradeBusinessCard(card)}
                     >
                       <strong>{card.title}</strong>
+                      <span>{existingBusiness ? `Current Lv.${existingBusiness.level}` : 'New business'}</span>
                       <span>
-                        {isOwnedByRival
-                          ? `Owned by ${players[existingBusiness!.playerIndex].name}`
-                          : existingBusiness
-                            ? `Current Lv.${existingBusiness.level}`
-                            : 'New business'}
-                      </span>
-                      <span>
-                        {isOwnedByRival
-                          ? 'Unavailable'
-                          : isMaxLevel
-                            ? 'Max Level'
-                            : `${existingBusiness ? 'Upgrade' : 'Cost'} ${formatMoney(card.price)}`}
+                        {isMaxLevel ? 'Max Level' : `${existingBusiness ? 'Upgrade' : 'Cost'} ${formatMoney(card.price)}`}
                       </span>
                       <span>
                         {isMaxLevel
@@ -2626,8 +2681,8 @@ function App() {
                           : `Next income ${formatMoney(nextIncome)} / round`}
                       </span>
                       <p>{card.description}</p>
+                      {isPolicyBlocked && <em>{activeTilePolicyBlock}</em>}
                       {!canAfford && !isMaxLevel && <em>Not enough cash</em>}
-                      {isOwnedByRival && <em>This stall is already owned</em>}
                     </button>
                   )
                 })}
@@ -2682,16 +2737,15 @@ function App() {
                 <p>{boardTiles[selectedInvestmentTile].description}</p>
                 <div className="investment-plans">
                   {investmentBusinessCards.map((card) => {
-                    const existingBusiness = businessesOnInvestmentTile.find(
+                    const existingBusiness = currentPlayerBusinessesOnInvestmentTile.find(
                       (business) => business.cardId === card.id,
                     )
-                    const isOwnedByCurrentPlayer = existingBusiness?.playerIndex === currentPlayerIndex
-                    const isOwnedByRival = Boolean(existingBusiness && !isOwnedByCurrentPlayer)
                     const nextLevel = existingBusiness ? existingBusiness.level + 1 : 1
                     const isMaxLevel = Boolean(
                       existingBusiness && existingBusiness.level >= maxBusinessLevel,
                     )
                     const canAfford = cash[currentPlayerIndex] >= card.price
+                    const isPolicyBlocked = Boolean(selectedInvestmentTilePolicyBlock)
                     const nextIncome = getBusinessIncomeAtLevel(
                       card,
                       Math.min(nextLevel, maxBusinessLevel),
@@ -2699,25 +2753,15 @@ function App() {
 
                     return (
                       <button
-                        disabled={!canAfford || isMaxLevel || isOwnedByRival}
+                        disabled={!canAfford || isMaxLevel || isPolicyBlocked}
                         key={card.id}
                         type="button"
                         onClick={() => buyOrUpgradeInvestmentCard(card, selectedInvestmentTile)}
                       >
                         <strong>{card.title}</strong>
+                        <span>{existingBusiness ? `Current Lv.${existingBusiness.level}` : 'New business'}</span>
                         <span>
-                          {isOwnedByRival
-                            ? `Owned by ${players[existingBusiness!.playerIndex].name}`
-                            : existingBusiness
-                              ? `Current Lv.${existingBusiness.level}`
-                              : 'New business'}
-                        </span>
-                        <span>
-                          {isOwnedByRival
-                            ? 'Unavailable'
-                            : isMaxLevel
-                              ? 'Max Level'
-                              : `${existingBusiness ? 'Upgrade' : 'Cost'} ${formatMoney(card.price)}`}
+                          {isMaxLevel ? 'Max Level' : `${existingBusiness ? 'Upgrade' : 'Cost'} ${formatMoney(card.price)}`}
                         </span>
                         <span>
                           {isMaxLevel
@@ -2725,8 +2769,8 @@ function App() {
                             : `Next income ${formatMoney(nextIncome)} / round`}
                         </span>
                         <p>{card.description}</p>
+                        {isPolicyBlocked && <em>{selectedInvestmentTilePolicyBlock}</em>}
                         {!canAfford && !isMaxLevel && <em>Not enough cash</em>}
-                        {isOwnedByRival && <em>This stall is already owned</em>}
                       </button>
                     )
                   })}
@@ -2756,7 +2800,10 @@ function App() {
               <span>Local Power Broker</span>
               <div className="influence-card">
                 <strong>Choose one influence card</strong>
-                <p>Buy one card to keep in hand. You can hold up to {maxInfluenceCards} influence cards. Risk happens later when the card is used.</p>
+                <p>
+                  Buy one card to keep in hand. You can hold up to {maxInfluenceCards} influence cards.{' '}
+                  <strong style={{ color: '#d9534f' }}>🚨 20% risk of police raid!</strong>
+                </p>
                 <div className="influence-cards">
                   {influenceOffer.map((card) => {
                     const playerCardCount = influenceHoldings.filter(
@@ -2841,36 +2888,43 @@ function App() {
                       : 'Not purchasable'}
                   </strong>
                 </div>
-                <div className="land-rule-grid">
-                  <div>
+                {selectedLandHolding && (
+                  <div className="land-buy-price">
                     <span>Current Owner</span>
-                    <strong>{selectedLandOwnerName}</strong>
+                    <strong>{players[selectedLandHolding.playerIndex].name}</strong>
+                  </div>
+                )}
+                {selectedLandHolding && (
+                  <div className="land-policy-panel">
+                    <div>
+                      <span>Land Policy</span>
+                      <strong>{landPolicyLabels[selectedLandHolding.policy]}</strong>
+                    </div>
+                    {canCurrentPlayerEditSelectedLandPolicy && (
+                      <div className="land-policy-actions" aria-label="Land policy controls">
+                        <button
+                          className={selectedLandHolding.policy === 'openLease' ? 'active' : ''}
+                          type="button"
+                          onClick={() => updateLandPolicy(selectedLandHolding.tileId, 'openLease')}
+                        >
+                          Open Lease
+                        </button>
+                        <button
+                          className={selectedLandHolding.policy === 'ownerOnly' ? 'active' : ''}
+                          type="button"
+                          onClick={() => updateLandPolicy(selectedLandHolding.tileId, 'ownerOnly')}
+                        >
+                          Owner Only
+                        </button>
+                      </div>
+                    )}
                     <p>
-                      {selectedLandHolding
-                        ? `Owned by ${selectedLandOwnerName}. Other players pay landing rent here.`
-                        : 'No owner yet. Buying this land makes future visitors pay rent to the buyer.'}
+                      {selectedLandHolding.policy === 'openLease'
+                        ? `Other players can buy or upgrade businesses here. Owner receives ${Math.round(openLeaseShareRate * 100)}% of tenant income at tile 00.`
+                        : 'Other players cannot buy or upgrade businesses here. Existing tenant businesses remain on the land.'}
                     </p>
                   </div>
-                  <div>
-                    <span>Landing Rent</span>
-                    <strong>{selectedLandRentRuleText}</strong>
-                    <p>Paid immediately when another player lands on this owned tile.</p>
-                  </div>
-                  <div>
-                    <span>Open Lease Rule</span>
-                    <strong>{Math.round(openLeaseShareRate * 100)}% of tenant income</strong>
-                    <p>Paid when tenant businesses collect income at tile 00.</p>
-                  </div>
-                  <div>
-                    <span>Projected Open Lease</span>
-                    <strong>{formatMoney(selectedLandLeaseIncome)} / round</strong>
-                    <p>
-                      {selectedLandTenantBusinesses.length > 0
-                        ? 'Based on businesses on this tile that are not owned by the land owner.'
-                        : 'No tenant business income on this tile yet.'}
-                    </p>
-                  </div>
-                </div>
+                )}
                 <div className="land-business-summary">
                   <div>
                     <span>Businesses on this tile</span>
@@ -2949,19 +3003,8 @@ function App() {
                   <>
                     <strong>เรียนต่อไหม?</strong>
                     <p>ถ้าเลือกเรียนต่อ ผู้เล่นจะข้ามคิวตัวเอง 5 ครั้ง แล้วรายได้ธุรกิจทั้งหมดจะเพิ่ม 15%</p>
-                    <p>Tuition: {formatMoney(bachelorTuition)} | Cash: {formatMoney(activeEducationCash)}</p>
-                    {!canAffordBachelorStudy && (
-                      <div className="education-warning" role="alert">
-                        เงินไม่พอเรียนต่อ ต้องมี {formatMoney(bachelorTuition)} แต่ตอนนี้มี{' '}
-                        {formatMoney(activeEducationCash)}
-                      </div>
-                    )}
                     <div className="education-actions">
-                      <button
-                        disabled={!canAffordBachelorStudy}
-                        type="button"
-                        onClick={() => startStudy('bachelor')}
-                      >
+                      <button type="button" onClick={() => startStudy('bachelor')}>
                         เรียนต่อ
                       </button>
                       <button
@@ -2979,19 +3022,8 @@ function App() {
                   <>
                     <strong>เรียนปริญญาโทไหม?</strong>
                     <p>ต้องกลับมาตกช่องนี้อีกครั้งจึงมีตัวเลือกนี้ ถ้าเลือกเรียนจะข้ามคิวตัวเอง 5 ครั้ง แล้วโบนัสรายได้ธุรกิจจะเพิ่มเป็น 30%</p>
-                    <p>Tuition: {formatMoney(masterTuition)} | Cash: {formatMoney(activeEducationCash)}</p>
-                    {!canAffordMasterStudy && (
-                      <div className="education-warning" role="alert">
-                        เงินไม่พอเรียนปริญญาโท ต้องมี {formatMoney(masterTuition)} แต่ตอนนี้มี{' '}
-                        {formatMoney(activeEducationCash)}
-                      </div>
-                    )}
                     <div className="education-actions">
-                      <button
-                        disabled={!canAffordMasterStudy}
-                        type="button"
-                        onClick={() => startStudy('master')}
-                      >
+                      <button type="button" onClick={() => startStudy('master')}>
                         เรียนปริญญาโท
                       </button>
                       <button
@@ -3122,6 +3154,33 @@ function App() {
                     <p>{boardTiles[selectedInventoryLand.tileId].description}</p>
                   </div>
                   <div className="detail-row">
+                    <strong>Land Policy</strong>
+                    <span>{landPolicyLabels[selectedInventoryLand.policy]}</span>
+                    <span>
+                      {selectedInventoryLand.policy === 'openLease'
+                        ? `Open Lease: other players may buy or upgrade businesses here.`
+                        : 'Owner Only: other players cannot buy or upgrade businesses here.'}
+                    </span>
+                    {canCurrentPlayerEditInventoryLandPolicy && (
+                      <div className="land-policy-actions detail-policy-actions" aria-label="Land policy controls">
+                        <button
+                          className={selectedInventoryLand.policy === 'openLease' ? 'active' : ''}
+                          type="button"
+                          onClick={() => updateLandPolicy(selectedInventoryLand.tileId, 'openLease')}
+                        >
+                          Open Lease
+                        </button>
+                        <button
+                          className={selectedInventoryLand.policy === 'ownerOnly' ? 'active' : ''}
+                          type="button"
+                          onClick={() => updateLandPolicy(selectedInventoryLand.tileId, 'ownerOnly')}
+                        >
+                          Owner Only
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                  <div className="detail-row">
                     <strong>Businesses on Land</strong>
                     <span>Owner businesses: {selectedInventoryLandOwnerBusinesses.length}</span>
                     <span>Tenant businesses: {selectedInventoryLandTenantBusinesses.length}</span>
@@ -3163,17 +3222,13 @@ function App() {
                   <div className="detail-row">
                     <strong>Status</strong>
                     <span>Held in hand</span>
-                    <span>
-                      {selectedPlayer.role === 'Human'
-                        ? 'Can be used while the board is ready.'
-                        : 'AI card use is not automated yet.'}
-                    </span>
-                    {selectedPlayer.role === 'Human' && (
+                    <span>{canUseSelectedInfluence ? 'Ready to use' : 'AI-held card. Manual use is Player-only in Demo 1.'}</span>
+                    <span>Jail-risk roll will be added later.</span>
+                    {canUseSelectedInfluence && (
                       <button
-                        className="detail-action-button"
-                        disabled={phase !== 'ready'}
+                        className="use-card-button"
                         type="button"
-                        onClick={() => applyInfluenceCard(selectedInventoryInfluence)}
+                        onClick={() => playInfluenceCard(selectedInventoryInfluence)}
                       >
                         Use Card
                       </button>
@@ -3202,8 +3257,8 @@ function App() {
                     <span>{selectedPrisonCouponStatus}</span>
                     <span>Prison Jackpot: {formatMoney(prisonJackpot)}</span>
                     <p>
-                      Influence cards have a {Math.round(influenceJailRiskRate * 100)}% jail risk on use.
-                      While in prison, skipped-turn income feeds the jackpot.
+                      Future influence-card risk can send players here. While in prison, skipped-turn income
+                      feeds the jackpot.
                     </p>
                   </div>
                 </div>
@@ -3212,38 +3267,74 @@ function App() {
           </div>
         )}
 
-        {evictionCard && (
+          {zoningPermitCardId !== null && (
+            <div className="zoning-permit-choice" aria-label="Zoning Permit Upgrade Choice">
+              <span>Zoning Permit Free Upgrade</span>
+              <div className="zoning-card">
+                <strong>Select one business to upgrade by +1 level for free</strong>
+                <div className="zoning-options">
+                  {businesses
+                    .filter((b) => b.playerIndex === currentPlayerIndex)
+                    .map((b) => (
+                      <button
+                        disabled={b.level >= maxBusinessLevel}
+                        key={b.id}
+                        type="button"
+                        onClick={() => resolveZoningPermitUpgrade(b.id)}
+                      >
+                        <strong>{b.title}</strong>
+                        <span>{boardTiles[b.tileId].name}</span>
+                        <span>
+                          {b.level >= maxBusinessLevel
+                            ? 'Max Level'
+                            : `Lv.${b.level} ➔ Lv.${b.level + 1}`}
+                        </span>
+                      </button>
+                    ))}
+                </div>
+                <button
+                  className="skip-zoning"
+                  type="button"
+                  onClick={() => setZoningPermitCardId(null)}
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          )}
+
+          {evictionCardId !== null && (
           <div className="choice-modal-backdrop">
             <div className="choice-modal eviction-modal" role="dialog" aria-modal="true">
               <div className="detail-modal-header">
                 <div>
                   <span>Influence Eviction</span>
-                  <strong>Choose Rival Business</strong>
+                  <strong>Choose Target</strong>
                 </div>
-                <button type="button" onClick={() => setEvictionCard(null)}>
+                <button type="button" onClick={() => setEvictionCardId(null)}>
                   Cancel
                 </button>
               </div>
 
               <div className="eviction-target-list">
                 {evictionTargets.length === 0 ? (
-                  <p>No rival business is available.</p>
+                  <p className="empty-detail">No rival business can be removed right now.</p>
                 ) : (
                   evictionTargets.map((business) => (
                     <button
-                      className="eviction-target-card"
+                      className="eviction-target"
                       key={business.id}
                       type="button"
-                      onClick={() => evictBusiness(evictionCard, business.id)}
+                      onClick={() => resolveInfluenceEviction(business.id)}
                     >
                       <strong>{business.title}</strong>
                       <span>
-                        {players[business.playerIndex].name} | {boardTiles[business.tileId].id.toString().padStart(2, '0')}{' '}
+                        {players[business.playerIndex].name} |{' '}
+                        {boardTiles[business.tileId].id.toString().padStart(2, '0')}{' '}
                         {boardTiles[business.tileId].name}
                       </span>
                       <span>
-                        Lv.{business.level} | Paid {formatMoney(business.pricePaid)} | Refund{' '}
-                        {formatMoney(Math.round(business.pricePaid * 0.5))}
+                        Lv.{business.level} | Refund {formatMoney(Math.round(business.pricePaid * 0.5))}
                       </span>
                     </button>
                   ))
@@ -3253,7 +3344,7 @@ function App() {
           </div>
         )}
 
-        {winnerRow && !isWinnerDismissed && (
+        {winnerRow && (
           <div className="choice-modal-backdrop">
             <div className="choice-modal winner-modal" role="dialog" aria-modal="true">
               <div className="detail-modal-header">
@@ -3261,19 +3352,27 @@ function App() {
                   <span>Demo 1 Winner</span>
                   <strong>{winnerRow.player.name}</strong>
                 </div>
+                <button type="button" onClick={resetGame}>
+                  New Game
+                </button>
               </div>
 
               <div className="winner-summary">
-                <span>Target Net Worth</span>
-                <strong>{formatMoney(netWorthWinTarget)}</strong>
-                <span>Winner Net Worth</span>
-                <strong>{formatMoney(winnerRow.total)}</strong>
+                <span className={`token ledger-token ${winnerRow.player.shape} ${winnerRow.player.colorClass}`} />
+                <div>
+                  <span>Target Net Worth</span>
+                  <strong>{formatMoney(targetNetWorth)}</strong>
+                </div>
+                <div>
+                  <span>Final Net Worth</span>
+                  <strong>{formatMoney(winnerRow.total)}</strong>
+                </div>
               </div>
 
               <div className="net-worth-list">
                 {netWorthRows.map((row, index) => (
-                  <div className="net-worth-row" key={`winner-${row.player.id}`}>
-                    <span className="rank-badge">{index + 1}</span>
+                  <div className="net-worth-row compact-rank-row" key={row.player.id}>
+                    <div className="rank-badge">{index + 1}</div>
                     <div className="rank-player">
                       <span className={`token ledger-token ${row.player.shape} ${row.player.colorClass}`} />
                       <div>
@@ -3282,26 +3381,11 @@ function App() {
                       </div>
                     </div>
                     <div className="rank-total">
-                      <span>Net Worth</span>
+                      <span>Total</span>
                       <strong>{formatMoney(row.total)}</strong>
                     </div>
                   </div>
                 ))}
-              </div>
-
-              <div className="winner-actions">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setIsWinnerDismissed(true)
-                    setStatus('Winner popup dismissed. Continue testing Demo 1 balance.')
-                  }}
-                >
-                  Continue Testing
-                </button>
-                <button className="winner-reset" type="button" onClick={resetGame}>
-                  Reset Game
-                </button>
               </div>
             </div>
           </div>
@@ -3312,7 +3396,7 @@ function App() {
             <div className="choice-modal net-worth-modal" role="dialog" aria-modal="true">
               <div className="detail-modal-header">
                 <div>
-                  <span>Current Ranking</span>
+                  <span>Current Ranking / Target {formatMoney(targetNetWorth)}</span>
                   <strong>Net Worth</strong>
                 </div>
                 <button type="button" onClick={() => setIsNetWorthOpen(false)}>
