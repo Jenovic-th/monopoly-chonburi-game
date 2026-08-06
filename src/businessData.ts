@@ -127,11 +127,82 @@ const tierDescriptions: Record<BusinessTier, string> = {
   large: 'High-cost play for bigger income, but it ties up cash quickly.',
 }
 
+const thaiTierDescriptions: Record<BusinessTier, string> = {
+  small: 'เริ่มต้นด้วยต้นทุนต่ำ มีความคล่องตัวทางการเงินสูงในช่วงแรก',
+  medium: 'ทางเลือกที่สมดุล รายได้มั่นคง และมีความเสี่ยงปานกลาง',
+  large: 'ธุรกิจขนาดใหญ่เพื่อรายได้สูงสุด แต่ต้องลงทุนเงินสดจำนวนมาก',
+}
+
+const thaiBusinessConcepts: Record<string, BusinessConcept> = {
+  market: {
+    small: 'แผงลอยในตลาด',
+    medium: 'ร้านค้าย่อยประจำถิ่น',
+    large: 'ร้านค้าแบรนด์เด่นประจำตลาด',
+  },
+  viewpoint: {
+    small: 'ซุ้มเครื่องดื่มชมวิว',
+    medium: 'คาเฟ่จุดชมวิว',
+    large: 'ภัตตาคารชมวิวทะเลสูง',
+  },
+  beach: {
+    small: 'เตียงผ้าใบและร่มหาด',
+    medium: 'คาเฟ่ชิลริมหาด',
+    large: 'ร้านอาหารทะเลริมชายหาด',
+  },
+  road: {
+    small: 'แผงขายของริมทาง',
+    medium: 'คีออสเช่าอุปกรณ์',
+    large: 'จุดเช็คอินของฝากและจุดพักรถ',
+  },
+  wildlife: {
+    small: 'ซุ้มต้อนรับนักท่องเที่ยว',
+    medium: 'คาเฟ่ครอบครัวริมสวนสัตว์',
+    large: 'จุดบริการจองทัวร์ป่าพรีเมียม',
+  },
+  island: {
+    small: 'แผงของว่างท่าเรือเกาะ',
+    medium: 'คาเฟ่ริมหาดบนเกาะ',
+    large: 'เคาน์เตอร์ทัวร์พันธมิตรรีสอร์ท',
+  },
+  mall: {
+    small: 'บูธป๊อปอัปคีออส',
+    medium: 'ร้านค้าขายปลีก',
+    large: 'ร้านค้าเรือธงสุดหรู',
+  },
+  industrial: {
+    small: 'ร้านข้าวแกงคนงาน',
+    medium: 'ร้านขายอุปกรณ์โรงงาน',
+    large: 'บริการขนส่งและซัพพลายเชน',
+  },
+  landmark: {
+    small: 'ซุ้มขายของที่ระลึก',
+    medium: 'คาเฟ่บริการนักทัศนาจร',
+    large: 'ศูนย์บริการข้อมูลท่องเที่ยวและจำหน่ายทัวร์',
+  },
+  show: {
+    small: 'ซุ้มถ่ายรูปที่ระลึก',
+    medium: 'มินิบาร์และร้านขนมหน้างาน',
+    large: 'จุดประสานงานบัตรแพ็กเกจวีไอพี',
+  },
+  themepark: {
+    small: 'ซุ้มเครื่องดื่มและป๊อปคอร์น',
+    medium: 'ร้านอาหารครอบครัวในสวนสนุก',
+    large: 'บริการสิทธิพิเศษพันธมิตรสวนสนุก',
+  },
+  nightlife: {
+    small: 'ร้านขายมื้อดึกโต้รุ่ง',
+    medium: 'ผับบาร์ดนตรีสด',
+    large: 'สถานบันเทิงครบวงจร',
+  },
+}
+
 export const businessLevelMultipliers = [1, 1.8, 2.5] as const
 
-export function getBusinessCardsForTile(tile: BoardTile): BusinessCard[] {
+export function getBusinessCardsForTile(tile: BoardTile, language?: 'en' | 'th'): BusinessCard[] {
   const economy = zoneEconomy[tile.zone] ?? zoneEconomy['Bangsaen + Nong Mon']
-  const concept = businessConcepts[tile.category] ?? fallbackConcept
+  const concept = (language === 'th' && thaiBusinessConcepts[tile.category])
+    ? thaiBusinessConcepts[tile.category]
+    : (businessConcepts[tile.category] ?? fallbackConcept)
 
   return (['small', 'medium', 'large'] as const).map((tier) => {
     const price = economy[tier]
@@ -142,7 +213,7 @@ export function getBusinessCardsForTile(tile: BoardTile): BusinessCard[] {
       title: concept[tier],
       price,
       baseIncome: Math.round(price * incomeRates[tier]),
-      description: tierDescriptions[tier],
+      description: language === 'th' ? thaiTierDescriptions[tier] : tierDescriptions[tier],
     }
   })
 }
