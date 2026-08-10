@@ -250,8 +250,12 @@
 - [x] Synthesize audio cues: Dice roll, Money chime, Upgrade fanfare, Land buyout, Police raid siren, Graduation fanfare, Shield deflection, Victory brass, and UI clicks.
 - [x] Add in-game Sound Toggle (`🔊 Sound: ON / 🔇 Sound: OFF`).
 - [x] Add Floating Cash Particle Effects (+฿X / -฿X) for transactions.
-- [x] Add 60fps Celebratory Confetti Canvas on Victory.
 - [x] Visual polish: active tile glow, rolling dice hover dynamics, and glassmorphism styling.
+- [x] Create Location-Accurate Cartoon Graphic Banners for all 4 Zones (Bangsaen, Sriracha, Amata, Pattaya).
+- [x] Build Tile Illustration Engine (`src/tileIllustrations.ts`) mapping contextual Thai/Eng titles, zone badges, local landmark icons, and tier icons across all 40 tiles.
+- [x] Overhaul Business Card Choice Modal with Hero Landmark Banner, Tier Badges (Small, Medium, Large), Cost/Income comparison stat boxes, and responsive non-overflow layout.
+- [x] Overhaul Investment Bank Choice Modal with Landmark Hero Banners and Tier Icons.
+- [x] Verify responsive modal viewports across mobile and desktop without text/box clipping.
 
 ## Design Questions
 

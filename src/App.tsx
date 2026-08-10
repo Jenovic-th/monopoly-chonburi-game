@@ -18,6 +18,7 @@ import {
   toggleSound,
 } from './soundEngine'
 import { ConfettiCanvas } from './ConfettiCanvas'
+import { getTileVisualDetails } from './tileIllustrations'
 import './App.css'
 import './tenantDetails.css'
 
@@ -2961,56 +2962,122 @@ function App() {
           <div className="choice-modal-backdrop">
             <div className="choice-modal" role="dialog" aria-modal="true">
           {phase === 'card-choice' && (
-            <div className="card-choice" aria-label="Action card choices">
-              <span>Choose one business card</span>
-              <div className="action-cards">
-                {businessCards.map((card) => {
-                  const existingBusiness = currentPlayerBusinessesOnActiveTile.find(
-                    (business) => business.cardId === card.id,
-                  )
-                  const nextLevel = existingBusiness ? existingBusiness.level + 1 : 1
-                  const isMaxLevel = Boolean(
-                    existingBusiness && existingBusiness.level >= maxBusinessLevel,
-                  )
-                  const canAfford = cash[currentPlayerIndex] >= card.price
-                  const isPolicyBlocked = Boolean(activeTilePolicyBlock)
-                  const nextIncome = getBusinessIncomeAtLevel(
-                    card,
-                    Math.min(nextLevel, maxBusinessLevel),
-                  )
-
-                  return (
-                    <button
-                      className="action-card"
-                      disabled={!canAfford || isMaxLevel || isPolicyBlocked}
-                      key={card.id}
-                      type="button"
-                      onClick={() => buyOrUpgradeBusinessCard(card)}
+            <div className="card-choice-container" aria-label="Action card choices">
+              {(() => {
+                const visual = getTileVisualDetails(activeTile.id)
+                return (
+                  <>
+                    <div
+                      className="modal-hero-banner"
+                      style={{
+                        backgroundImage: `linear-gradient(to bottom, rgba(15, 23, 42, 0.45), rgba(15, 23, 42, 0.90)), url(${visual.bannerImage})`,
+                        borderBottom: `3px solid ${visual.accentColor}`,
+                      }}
                     >
-                      <strong>{card.title}</strong>
-                      <span>{existingBusiness ? `Current Lv.${existingBusiness.level}` : 'New business'}</span>
-                      <span>
-                        {isMaxLevel ? 'Max Level' : `${existingBusiness ? 'Upgrade' : 'Cost'} ${formatMoney(card.price)}`}
-                      </span>
-                      <span>
-                        {isMaxLevel
-                          ? `Income ${formatMoney(getBusinessIncomeAtLevel(card, maxBusinessLevel))} / round`
-                          : `Next income ${formatMoney(nextIncome)} / round`}
-                      </span>
-                      <p>{card.description}</p>
-                      {isPolicyBlocked && <em>{activeTilePolicyBlock}</em>}
-                      {!canAfford && !isMaxLevel && <em>Not enough cash</em>}
-                    </button>
-                  )
-                })}
-              </div>
-              <button
-                className="skip-card"
-                type="button"
-                onClick={() => resolveCardChoice('Skipped card choice.')}
-              >
-                ไม่เล่นการ์ด
-              </button>
+                      <div className="hero-banner-content">
+                        <div className="hero-top-badges">
+                          <span
+                            className="hero-zone-badge"
+                            style={{ backgroundColor: visual.accentColor }}
+                          >
+                            {activeTile.zoneTh}
+                          </span>
+                          <span className="hero-tag-badge">{visual.tagTh}</span>
+                        </div>
+                        <div className="hero-title-row">
+                          <span className="hero-icon">{visual.icon}</span>
+                          <div>
+                            <h2>{activeTile.nameTh}</h2>
+                            <p className="hero-eng-name">{activeTile.name}</p>
+                          </div>
+                        </div>
+                        <p className="hero-subtitle">{visual.subtitleTh}</p>
+                      </div>
+                    </div>
+
+                    <div className="action-cards-body">
+                      <div className="card-choice-heading">
+                        <span>CHOOSE ONE BUSINESS CARD</span>
+                      </div>
+
+                      <div className="action-cards-grid">
+                        {businessCards.map((card, index) => {
+                          const existingBusiness = currentPlayerBusinessesOnActiveTile.find(
+                            (business) => business.cardId === card.id,
+                          )
+                          const nextLevel = existingBusiness ? existingBusiness.level + 1 : 1
+                          const isMaxLevel = Boolean(
+                            existingBusiness && existingBusiness.level >= maxBusinessLevel,
+                          )
+                          const canAfford = cash[currentPlayerIndex] >= card.price
+                          const isPolicyBlocked = Boolean(activeTilePolicyBlock)
+                          const nextIncome = getBusinessIncomeAtLevel(
+                            card,
+                            Math.min(nextLevel, maxBusinessLevel),
+                          )
+                          const tierIcon = visual.tierIcons[index] ?? '🏪'
+
+                          return (
+                            <button
+                              className={`action-card-item tier-${card.tier} ${!canAfford ? 'disabled-afford' : ''} ${isMaxLevel ? 'max-level' : ''}`}
+                              disabled={!canAfford || isMaxLevel || isPolicyBlocked}
+                              key={card.id}
+                              type="button"
+                              onClick={() => buyOrUpgradeBusinessCard(card)}
+                            >
+                              <div className="action-card-header">
+                                <span className="card-tier-icon">{tierIcon}</span>
+                                <div className="card-title-group">
+                                  <div className="card-title-row">
+                                    <strong>{card.title}</strong>
+                                    <span className={`card-tier-pill tier-${card.tier}`}>
+                                      {card.tier.toUpperCase()}
+                                    </span>
+                                  </div>
+                                  <span className="card-status-pill">
+                                    {existingBusiness
+                                      ? `⭐ อัปเกรดเป็น Lv.${existingBusiness.level + 1}`
+                                      : '✨ ธุรกิจใหม่ (New business)'}
+                                  </span>
+                                </div>
+                              </div>
+
+                              <div className="card-stats-grid">
+                                <div className="card-stat-box cost-box">
+                                  <span className="stat-label">
+                                    {existingBusiness ? 'Upgrade Cost' : 'Cost'}
+                                  </span>
+                                  <strong className="stat-value">{formatMoney(card.price)}</strong>
+                                </div>
+                                <div className="card-stat-box income-box">
+                                  <span className="stat-label">Income / round</span>
+                                  <strong className="stat-value">+{formatMoney(nextIncome)}</strong>
+                                </div>
+                              </div>
+
+                              <p className="card-desc-text">{card.description}</p>
+                              {isPolicyBlocked && (
+                                <div className="card-warning-msg">⚠️ {activeTilePolicyBlock}</div>
+                              )}
+                              {!canAfford && !isMaxLevel && (
+                                <div className="card-warning-msg">💸 เงินสดไม่เพียงพอ (Not enough cash)</div>
+                              )}
+                            </button>
+                          )
+                        })}
+                      </div>
+
+                      <button
+                        className="skip-card-btn"
+                        type="button"
+                        onClick={() => resolveCardChoice('Skipped card choice.')}
+                      >
+                        ไม่เล่นการ์ด
+                      </button>
+                    </div>
+                  </>
+                )
+              })()}
             </div>
           )}
 
@@ -3047,68 +3114,136 @@ function App() {
           )}
 
           {phase === 'investment-card-choice' && selectedInvestmentTile !== null && (
-            <div className="investment-plan-choice" aria-label="Investment card choices">
-              <span>Invest at {selectedInvestmentTile.toString().padStart(2, '0')}</span>
-              <div className="investment-plan-card">
-                <strong>{boardTiles[selectedInvestmentTile].name}</strong>
-                <p>{boardTiles[selectedInvestmentTile].description}</p>
-                <div className="investment-plans">
-                  {investmentBusinessCards.map((card) => {
-                    const existingBusiness = currentPlayerBusinessesOnInvestmentTile.find(
-                      (business) => business.cardId === card.id,
-                    )
-                    const nextLevel = existingBusiness ? existingBusiness.level + 1 : 1
-                    const isMaxLevel = Boolean(
-                      existingBusiness && existingBusiness.level >= maxBusinessLevel,
-                    )
-                    const canAfford = cash[currentPlayerIndex] >= card.price
-                    const isPolicyBlocked = Boolean(selectedInvestmentTilePolicyBlock)
-                    const nextIncome = getBusinessIncomeAtLevel(
-                      card,
-                      Math.min(nextLevel, maxBusinessLevel),
-                    )
+            <div className="card-choice-container" aria-label="Investment card choices">
+              {(() => {
+                const visual = getTileVisualDetails(selectedInvestmentTile)
+                const tile = boardTiles[selectedInvestmentTile]
+                return (
+                  <>
+                    <div
+                      className="modal-hero-banner"
+                      style={{
+                        backgroundImage: `linear-gradient(to bottom, rgba(15, 23, 42, 0.45), rgba(15, 23, 42, 0.90)), url(${visual.bannerImage})`,
+                        borderBottom: `3px solid ${visual.accentColor}`,
+                      }}
+                    >
+                      <div className="hero-banner-content">
+                        <div className="hero-top-badges">
+                          <span
+                            className="hero-zone-badge"
+                            style={{ backgroundColor: visual.accentColor }}
+                          >
+                            {tile.zoneTh}
+                          </span>
+                          <span className="hero-tag-badge">Investment Bank</span>
+                        </div>
+                        <div className="hero-title-row">
+                          <span className="hero-icon">{visual.icon}</span>
+                          <div>
+                            <h2>{tile.nameTh}</h2>
+                            <p className="hero-eng-name">{tile.name}</p>
+                          </div>
+                        </div>
+                        <p className="hero-subtitle">{visual.subtitleTh}</p>
+                      </div>
+                    </div>
 
-                    return (
-                      <button
-                        disabled={!canAfford || isMaxLevel || isPolicyBlocked}
-                        key={card.id}
-                        type="button"
-                        onClick={() => buyOrUpgradeInvestmentCard(card, selectedInvestmentTile)}
-                      >
-                        <strong>{card.title}</strong>
-                        <span>{existingBusiness ? `Current Lv.${existingBusiness.level}` : 'New business'}</span>
-                        <span>
-                          {isMaxLevel ? 'Max Level' : `${existingBusiness ? 'Upgrade' : 'Cost'} ${formatMoney(card.price)}`}
-                        </span>
-                        <span>
-                          {isMaxLevel
-                            ? `Income ${formatMoney(getBusinessIncomeAtLevel(card, maxBusinessLevel))} / round`
-                            : `Next income ${formatMoney(nextIncome)} / round`}
-                        </span>
-                        <p>{card.description}</p>
-                        {isPolicyBlocked && <em>{selectedInvestmentTilePolicyBlock}</em>}
-                        {!canAfford && !isMaxLevel && <em>Not enough cash</em>}
-                      </button>
-                    )
-                  })}
-                </div>
-                <div className="investment-plan-actions">
-                  <button type="button" onClick={returnToInvestmentTileList}>
-                    Back to tile list
-                  </button>
-                  <button
-                    className="skip-investment"
-                    type="button"
-                    onClick={() =>
-                      resolveInvestmentChoice(
-                        `Skipped Investment Bank choice after viewing ${selectedInvestmentTile.toString().padStart(2, '0')} ${boardTiles[selectedInvestmentTile].name}.`,
-                      )
-                    }
-                  >
-                    Skip investment
-                  </button>
-                </div>
-              </div>
+                    <div className="action-cards-body">
+                      <div className="card-choice-heading">
+                        <span>INVEST AT {selectedInvestmentTile.toString().padStart(2, '0')}</span>
+                      </div>
+
+                      <div className="action-cards-grid">
+                        {investmentBusinessCards.map((card, index) => {
+                          const existingBusiness = currentPlayerBusinessesOnInvestmentTile.find(
+                            (business) => business.cardId === card.id,
+                          )
+                          const nextLevel = existingBusiness ? existingBusiness.level + 1 : 1
+                          const isMaxLevel = Boolean(
+                            existingBusiness && existingBusiness.level >= maxBusinessLevel,
+                          )
+                          const canAfford = cash[currentPlayerIndex] >= card.price
+                          const isPolicyBlocked = Boolean(selectedInvestmentTilePolicyBlock)
+                          const nextIncome = getBusinessIncomeAtLevel(
+                            card,
+                            Math.min(nextLevel, maxBusinessLevel),
+                          )
+                          const tierIcon = visual.tierIcons[index] ?? '🏪'
+
+                          return (
+                            <button
+                              className={`action-card-item tier-${card.tier} ${!canAfford ? 'disabled-afford' : ''} ${isMaxLevel ? 'max-level' : ''}`}
+                              disabled={!canAfford || isMaxLevel || isPolicyBlocked}
+                              key={card.id}
+                              type="button"
+                              onClick={() => buyOrUpgradeInvestmentCard(card, selectedInvestmentTile)}
+                            >
+                              <div className="action-card-header">
+                                <span className="card-tier-icon">{tierIcon}</span>
+                                <div className="card-title-group">
+                                  <div className="card-title-row">
+                                    <strong>{card.title}</strong>
+                                    <span className={`card-tier-pill tier-${card.tier}`}>
+                                      {card.tier.toUpperCase()}
+                                    </span>
+                                  </div>
+                                  <span className="card-status-pill">
+                                    {existingBusiness
+                                      ? `⭐ อัปเกรดเป็น Lv.${existingBusiness.level + 1}`
+                                      : '✨ ธุรกิจใหม่ (New business)'}
+                                  </span>
+                                </div>
+                              </div>
+
+                              <div className="card-stats-grid">
+                                <div className="card-stat-box cost-box">
+                                  <span className="stat-label">
+                                    {existingBusiness ? 'Upgrade Cost' : 'Cost'}
+                                  </span>
+                                  <strong className="stat-value">{formatMoney(card.price)}</strong>
+                                </div>
+                                <div className="card-stat-box income-box">
+                                  <span className="stat-label">Income / round</span>
+                                  <strong className="stat-value">+{formatMoney(nextIncome)}</strong>
+                                </div>
+                              </div>
+
+                              <p className="card-desc-text">{card.description}</p>
+                              {isPolicyBlocked && (
+                                <div className="card-warning-msg">⚠️ {selectedInvestmentTilePolicyBlock}</div>
+                              )}
+                              {!canAfford && !isMaxLevel && (
+                                <div className="card-warning-msg">💸 เงินสดไม่เพียงพอ (Not enough cash)</div>
+                              )}
+                            </button>
+                          )
+                        })}
+                      </div>
+
+                      <div className="plan-actions">
+                        <button
+                          className="back-investment"
+                          type="button"
+                          onClick={returnToInvestmentTileList}
+                        >
+                          Back to tile list
+                        </button>
+                        <button
+                          className="skip-card-btn"
+                          type="button"
+                          onClick={() =>
+                            resolveInvestmentChoice(
+                              `Skipped Investment Bank choice after viewing ${selectedInvestmentTile.toString().padStart(2, '0')} ${tile.name}.`,
+                            )
+                          }
+                        >
+                          Skip investment
+                        </button>
+                      </div>
+                    </div>
+                  </>
+                )
+              })()}
             </div>
           )}
 

@@ -22,10 +22,17 @@
     - 🛡 Protective barrier deflection on Tax Relief rent blocks
     - 🏆 Glorious brass victory fanfare on hitting ฿10,000,000 Net Worth
     - 🔇 In-game sound toggle (`🔊 Sound: ON / 🔇 Sound: OFF`)
-- **Visual VFX & Particle Effects**:
-  - 🪙 **Floating Cash Particles (+฿X, -฿X)**: Dynamic animated cash chips floating upward during transactions.
-  - 🏆 **Celebratory Confetti Canvas (`src/ConfettiCanvas.tsx`)**: High-performance 60fps colorful particle shower upon game victory.
-  - 🌟 **Active Tile Glow & Rolling Dice Hover**: Soft glowing pulse border and interactive hover micro-animations.
+- **Location-Accurate Stylized Cartoon Graphic System (`src/tileIllustrations.ts`)**:
+  - Generated and integrated stylized cartoon landmark artwork across all 4 zones:
+    - 🏖 **Bangsaen + Nong Mon**: Palm trees, Wonnapha beach, seafood market, Khao Sam Muk, Burapha University.
+    - ⚓ **Sriracha + Laem Chabang**: Gantry cranes, cargo container ships, Koh Sichang, J-Park, Tiger Zoo.
+    - 🏭 **Amata City + Phan Thong**: Smart eco-factories, logistics hubs, worker markets, elevated expressways.
+    - 🎡 **Pattaya**: Walking street neon signs, tropical beach towers, Sanctuary of Truth, floating market.
+  - Built `getTileVisualDetails(tileId)` mapping Thai/Eng titles, zone badges, local landmark icons, and tier icons across all 40 tiles.
+- **Overhauled Business & Land Choice Modals**:
+  - Replaced plain text popup boxes with a Hero Landmark Banner with dark-gradient overlays for maximum readability.
+  - Upgraded business tier cards with icon badges (Tier 1/2/3), dedicated Cost & Income comparison boxes, status tags, and Thai labels.
+  - Ensured zero clipping/overflow on all mobile & desktop screen viewports with responsive auto-scrolling containers.
 - **Full Verification**:
   - `npm.cmd run check:encoding` passed.
   - `npm.cmd run lint` passed (0 errors).
