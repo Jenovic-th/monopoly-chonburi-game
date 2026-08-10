@@ -2392,5 +2392,115 @@ button {
   color: #0f172a;
 }
 
+/* Console Toggles */
+.console-toggles {
+  display: flex;
+  gap: 8px;
+  width: 100%;
+}
+
+.console-toggles button {
+  flex: 1;
+}
+
+.sound-toggle-btn {
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 1px solid #cbd5e1;
+  background: #f8fafc;
+  color: #334155;
+  font-size: 12px;
+  font-weight: 800;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.sound-toggle-btn.active {
+  border-color: #10b981;
+  background: #ecfdf5;
+  color: #065f46;
+}
+
+.sound-toggle-btn.muted {
+  border-color: #fca5a5;
+  background: #fef2f2;
+  color: #991b1b;
+}
+
+/* Floating Cash Particle Effects */
+.cash-float-container {
+  position: fixed;
+  top: 40%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  pointer-events: none;
+  z-index: 10001;
+}
+
+.cash-float-chip {
+  padding: 8px 18px;
+  border-radius: 999px;
+  font-size: 18px;
+  font-weight: 900;
+  letter-spacing: 0.02em;
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.25);
+  animation: floatUpAndFade 1.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  backdrop-filter: blur(8px);
+}
+
+.float-positive {
+  background: linear-gradient(135deg, #10b981, #059669);
+  color: #ffffff;
+  border: 2px solid #a7f3d0;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.float-negative {
+  background: linear-gradient(135deg, #ef4444, #dc2626);
+  color: #ffffff;
+  border: 2px solid #fecaca;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+@keyframes floatUpAndFade {
+  0% {
+    opacity: 0;
+    transform: translateY(20px) scale(0.85);
+  }
+  20% {
+    opacity: 1;
+    transform: translateY(0) scale(1.1);
+  }
+  75% {
+    opacity: 1;
+    transform: translateY(-25px) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-50px) scale(0.9);
+  }
+}
+
+/* Rolling Dice Animated Shake */
+.dice-row {
+  transition: transform 0.2s ease;
+}
+
+.dice-row:hover {
+  transform: scale(1.03);
+}
+
+/* Active Tile Glow */
+.tile.current-active {
+  box-shadow: 0 0 0 3px #3b82f6, 0 8px 24px rgba(59, 130, 246, 0.35);
+  transform: translateY(-2px);
+  z-index: 10;
+}
+
+
 
 

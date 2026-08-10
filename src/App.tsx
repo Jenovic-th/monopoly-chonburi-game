@@ -6,6 +6,18 @@ import {
   type BusinessCard,
 } from './businessData'
 import { runSimulationBatch, type SimBatchSummary } from './simulationEngine'
+import {
+  playDiceRollSound,
+  playMoneySound,
+  playUpgradeSound,
+  playLandBuySound,
+  playPoliceRaidSound,
+  playGraduationSound,
+  playShieldSound,
+  playVictoryFanfare,
+  toggleSound,
+} from './soundEngine'
+import { ConfettiCanvas } from './ConfettiCanvas'
 import './App.css'
 import './tenantDetails.css'
 
@@ -386,6 +398,12 @@ function countStartPasses(startPosition: number, steps: number) {
   return Math.floor((startPosition + steps) / tileCount)
 }
 
+let floatCounter = 0
+function getNextFloatId(): number {
+  floatCounter += 1
+  return floatCounter
+}
+
 function App() {
   const [positions, setPositions] = useState<number[]>(() => players.map(() => 0))
   const [currentPlayerIndex, setCurrentPlayerIndex] = useState(0)
@@ -426,6 +444,8 @@ function App() {
   const [taxReliefTurns, setTaxReliefTurns] = useState<number[]>(() => players.map(() => 0))
   const [zoningPermitCardId, setZoningPermitCardId] = useState<string | null>(null)
   const [devMode, setDevMode] = useState(false)
+  const [soundOn, setSoundOn] = useState(true)
+  const [cashFloats, setCashFloats] = useState<Array<{ id: number; text: string; tone: 'positive' | 'negative' }>>([])
   const [simResults, setSimResults] = useState<SimBatchSummary | null>(null)
   const [isSimRunning, setIsSimRunning] = useState(false)
   const [simBatchSize, setSimBatchSize] = useState(50)
@@ -507,6 +527,14 @@ function App() {
     window.setTimeout(() => {
       setToastMessage((current) => (current?.text === text ? null : current))
     }, 4500)
+  }
+
+  function triggerCashFloat(text: string, tone: 'positive' | 'negative' = 'positive') {
+    const id = getNextFloatId()
+    setCashFloats((prev) => [...prev, { id, text, tone }])
+    window.setTimeout(() => {
+      setCashFloats((prev) => prev.filter((f) => f.id !== id))
+    }, 1600)
   }
 
   function updatePositions(nextPositions: number[]) {
@@ -805,34 +833,38 @@ function App() {
 
   function payLandRent(playerIndex: number, tileId: number) {
     const landHolding = landHoldingsRef.current.find((holding) => holding.tileId === tileId)
-    const tile = boardTiles[tileId]
+    const boardTile = boardTiles[tileId]
 
-    if (!landHolding || landHolding.playerIndex === playerIndex || !tile.landPrice) {
+    if (!landHolding || landHolding.playerIndex === playerIndex || !boardTile.landPrice) {
       return null
     }
 
-    const rentDue = Math.round(tile.landPrice * landRentRate)
-
-    if (taxReliefTurnsRef.current[playerIndex] > 0) {
-      const nextTaxRelief = [...taxReliefTurnsRef.current]
-      nextTaxRelief[playerIndex] -= 1
-      updateTaxReliefTurns(nextTaxRelief)
-
+    const currentTaxRelief = taxReliefTurnsRef.current[playerIndex]
+    if (currentTaxRelief > 0) {
+      const nextTax = [...taxReliefTurnsRef.current]
+      nextTax[playerIndex] = Math.max(0, currentTaxRelief - 1)
+      updateTaxReliefTurns(nextTax)
+      playShieldSound()
+      showToast(
+        `🛡 ${players[playerIndex].name} used Tax Relief! Land rent waived at ${boardTile.name}. (${nextTax[playerIndex]} charges left)`,
+        'warning',
+      )
       return {
-        ownerIndex: landHolding.playerIndex,
-        rentDue,
+        rentDue: 0,
         rentPaid: 0,
-        taxReliefActive: true,
-        payerCash: cashRef.current[playerIndex],
-        ownerCash: cashRef.current[landHolding.playerIndex],
+        ownerIndex: landHolding.playerIndex,
       }
     }
 
-    const rentPaid = Math.min(cashRef.current[playerIndex], rentDue)
+    const rentDue = Math.round(boardTile.landPrice * landRentRate)
+    const payerCash = cashRef.current[playerIndex]
+    const rentPaid = Math.min(payerCash, rentDue)
     const nextCash = [...cashRef.current]
     nextCash[playerIndex] -= rentPaid
     nextCash[landHolding.playerIndex] += rentPaid
     updateCash(nextCash)
+    playMoneySound()
+    triggerCashFloat(`-${formatMoney(rentPaid)}`, 'negative')
 
     return {
       ownerIndex: landHolding.playerIndex,
@@ -906,6 +938,8 @@ function App() {
     const payout = payStartIncome(playerIndex, countStartPasses(startPosition, steps))
 
     if (payout) {
+      playMoneySound()
+      triggerCashFloat(`+${formatMoney(payout.totalIncome)}`, 'positive')
       const eventText =
         payout.modifierSummary.length > 0 ? ` Event: ${payout.modifierSummary.join(', ')}.` : ''
       const leaseText =
@@ -1058,6 +1092,7 @@ function App() {
 
     const forcedMove = player.role === 'Human' ? forcedMoveRef.current : null
     forcedMoveRef.current = null
+    playDiceRollSound()
     const roll = forcedMove === null ? rollDice() : { die1: forcedMove, die2: 0, total: forcedMove }
     setLatestRoll(roll)
     setStatus(
@@ -1077,19 +1112,19 @@ function App() {
     const rentResult =
       typeof finalPosition === 'number' ? payLandRent(playerIndex, finalPosition) : null
     const rentMessage = rentResult
-      ? rentResult.taxReliefActive
-        ? `🛡 Tax Relief Active! ${player.name} paid 0 rent to ${players[rentResult.ownerIndex].name} for ${boardTiles[finalPosition as number].name} (${taxReliefTurnsRef.current[playerIndex]} charges left).`
+      ? rentResult.rentDue === 0
+        ? `🛡 Tax Relief Active! ${player.name} paid 0 rent to ${players[rentResult.ownerIndex].name} for ${boardTiles[finalPosition as number].name}.`
         : `${player.name} paid ${formatMoney(rentResult.rentPaid)} rent to ${players[rentResult.ownerIndex].name} for ${boardTiles[finalPosition as number].name}.`
       : ''
 
-    if (rentResult) {
+    if (rentResult && rentResult.rentDue > 0) {
       setStatus(
-        rentResult.taxReliefActive
-          ? rentMessage
-          : rentResult.rentPaid < rentResult.rentDue
-            ? `${rentMessage} Rent due was ${formatMoney(rentResult.rentDue)}, but ${player.name} only had enough to pay ${formatMoney(rentResult.rentPaid)}.`
-            : rentMessage,
+        rentResult.rentPaid < rentResult.rentDue
+          ? `${rentMessage} Rent due was ${formatMoney(rentResult.rentDue)}, but ${player.name} only had enough to pay ${formatMoney(rentResult.rentPaid)}.`
+          : rentMessage,
       )
+    } else if (rentResult) {
+      setStatus(rentMessage)
     }
 
     if (
@@ -1410,6 +1445,7 @@ function App() {
     setPhase('study-skip')
 
     if (remainingTurns === 0) {
+      playGraduationSound()
       const bonus =
         completedStudy === 'master'
           ? educationIncomeBonus.masterCompleted
@@ -1530,7 +1566,9 @@ function App() {
 
         await playTurn(playerIndex, runId)
 
-        if (runId === runIdRef.current && checkWinCondition()) {
+        const winner = checkWinCondition()
+        if (runId === runIdRef.current && winner) {
+          playVictoryFanfare()
           activeRunRef.current = false
           return
         }
@@ -1733,6 +1771,8 @@ function App() {
             : business,
         ),
       )
+      playUpgradeSound()
+      triggerCashFloat(`-${formatMoney(action.card.price)}`, 'negative')
 
       return `${players[playerIndex].name} upgraded ${action.card.title} at ${tile.name} to level ${nextLevel}.`
     }
@@ -1749,6 +1789,8 @@ function App() {
       baseIncome: action.card.baseIncome,
     }
     updateBusinesses([...businessesRef.current, nextBusiness])
+    playMoneySound()
+    triggerCashFloat(`-${formatMoney(action.card.price)}`, 'negative')
 
     return `${players[playerIndex].name} bought ${action.card.title} at ${tile.name}.`
   }
@@ -1780,6 +1822,8 @@ function App() {
         policy,
       },
     ])
+    playLandBuySound()
+    triggerCashFloat(`-${formatMoney(tile.landPrice)}`, 'negative')
 
     return `${players[playerIndex].name} bought land at ${tile.name} and set ${landPolicyLabels[policy]}.`
   }
@@ -1859,6 +1903,8 @@ function App() {
         policy: 'openLease',
       },
     ])
+    playLandBuySound()
+    triggerCashFloat(`-${formatMoney(tile.landPrice)}`, 'negative')
     closeLandDetail(
       `${players[playerIndex].name} bought land at ${tile.name} for ${formatMoney(tile.landPrice)}. Cash left: ${formatMoney(nextCash[playerIndex])}.`,
     )
@@ -1915,6 +1961,8 @@ function App() {
             : business,
         ),
       )
+      playUpgradeSound()
+      triggerCashFloat(`-${formatMoney(card.price)}`, 'negative')
       resolveCardChoice(
         `${players[playerIndex].name} upgraded ${card.title} at ${tile.name} to level ${nextLevel} for ${formatMoney(card.price)}. New income: ${formatMoney(getBusinessIncomeAtLevel(card, nextLevel))} / round.`,
       )
@@ -1933,6 +1981,8 @@ function App() {
       baseIncome: card.baseIncome,
     }
     updateBusinesses([...businessesRef.current, nextBusiness])
+    playMoneySound()
+    triggerCashFloat(`-${formatMoney(card.price)}`, 'negative')
     resolveCardChoice(
       `${players[playerIndex].name} bought ${card.title} at ${tile.name} for ${formatMoney(card.price)}. Cash left: ${formatMoney(nextCash[playerIndex])}.`,
     )
@@ -2019,6 +2069,7 @@ function App() {
       const nextPrisonTurns = [...prisonTurnsRef.current]
       nextPrisonTurns[playerIndex] = 2
       updatePrisonTurns(nextPrisonTurns)
+      playPoliceRaidSound()
 
       resolveInfluenceChoice(
         `🚨 POLICE RAID! ${players[playerIndex].name} bought ${card.title} but got arrested in the raid! Sent to Chonburi Prison for 2 turns!`,
@@ -2074,6 +2125,7 @@ function App() {
       const nextPrisonTurns = [...prisonTurnsRef.current]
       nextPrisonTurns[aiIndex] = 2
       updatePrisonTurns(nextPrisonTurns)
+      playPoliceRaidSound()
 
       setStatus(
         `🚨 POLICE RAID! ${players[aiIndex].name} bought ${card.title} but got arrested! Sent to Chonburi Prison for 2 turns!`,
@@ -2599,13 +2651,22 @@ function App() {
             {primaryButtonText}
           </button>
 
-          <button
-            className={`dev-mode-toggle ${devMode ? 'active' : ''}`}
-            type="button"
-            onClick={() => setDevMode(!devMode)}
-          >
-            🛠 Dev Mode: {devMode ? 'ON' : 'OFF'}
-          </button>
+          <div className="console-toggles">
+            <button
+              className={`dev-mode-toggle ${devMode ? 'active' : ''}`}
+              type="button"
+              onClick={() => setDevMode(!devMode)}
+            >
+              🛠 Dev Mode: {devMode ? 'ON' : 'OFF'}
+            </button>
+            <button
+              className={`sound-toggle-btn ${soundOn ? 'active' : 'muted'}`}
+              type="button"
+              onClick={() => setSoundOn(toggleSound())}
+            >
+              {soundOn ? '🔊 Sound: ON' : '🔇 Sound: OFF'}
+            </button>
+          </div>
 
           {devMode && (
             <>
@@ -3862,6 +3923,16 @@ function App() {
             <span>{toastMessage.text}</span>
           </div>
         )}
+
+        <div className="cash-float-container" aria-hidden="true">
+          {cashFloats.map((cf) => (
+            <div key={cf.id} className={`cash-float-chip float-${cf.tone}`}>
+              {cf.text}
+            </div>
+          ))}
+        </div>
+
+        {winnerRow && <ConfettiCanvas />}
       </div>
     </main>
   )

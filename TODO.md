@@ -246,6 +246,12 @@
 - [x] Add in-game Simulation Analytics & Balance Modal in Dev Mode.
 - [x] Measure and verify game balance across 50-game batches (Win distribution, average rounds, zone revenue heatmap, rent flow).
 - [x] Fine-tune economy velocity (20-25 average rounds to ฿10,000,000 Net Worth).
+- [x] Build Procedural Web Audio Sound Engine (`src/soundEngine.ts`) with zero external audio assets.
+- [x] Synthesize audio cues: Dice roll, Money chime, Upgrade fanfare, Land buyout, Police raid siren, Graduation fanfare, Shield deflection, Victory brass, and UI clicks.
+- [x] Add in-game Sound Toggle (`🔊 Sound: ON / 🔇 Sound: OFF`).
+- [x] Add Floating Cash Particle Effects (+฿X / -฿X) for transactions.
+- [x] Add 60fps Celebratory Confetti Canvas on Victory.
+- [x] Visual polish: active tile glow, rolling dice hover dynamics, and glassmorphism styling.
 
 ## Design Questions
 
