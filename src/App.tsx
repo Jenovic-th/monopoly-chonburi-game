@@ -392,11 +392,17 @@ function App() {
   const [latestRoll, setLatestRoll] = useState<DiceRoll | null>(null)
   const [status, setStatus] = useState('Ready. Roll to start the round.')
   const [, setRollHistory] = useState<string[]>([])
-  const [education, setEducation] = useState<EducationState>({
-    stage: 'none',
-    activeStudy: 'none',
-    skipTurns: 0,
-  })
+  const [toastMessage, setToastMessage] = useState<{
+    text: string
+    tone: 'success' | 'warning' | 'info' | 'danger'
+  } | null>(null)
+  const [education, setEducation] = useState<EducationState[]>(() =>
+    players.map(() => ({
+      stage: 'none',
+      activeStudy: 'none',
+      skipTurns: 0,
+    })),
+  )
   const [buraphaChoice, setBuraphaChoice] = useState<BuraphaChoice | null>(null)
   const [, setInvestmentVisits] = useState<number[]>(() => players.map(() => 0))
   const [investmentOffer, setInvestmentOffer] = useState<InvestmentOffer | null>(null)
@@ -430,11 +436,13 @@ function App() {
   const activeRunRef = useRef(false)
   const runIdRef = useRef(0)
   const positionsRef = useRef<number[]>(players.map(() => 0))
-  const educationRef = useRef<EducationState>({
-    stage: 'none',
-    activeStudy: 'none',
-    skipTurns: 0,
-  })
+  const educationRef = useRef<EducationState[]>(
+    players.map(() => ({
+      stage: 'none',
+      activeStudy: 'none',
+      skipTurns: 0,
+    })),
+  )
   const investmentVisitsRef = useRef<number[]>(players.map(() => 0))
   const cashRef = useRef<number[]>(players.map(() => startingCash))
   const businessesRef = useRef<BusinessHolding[]>([])
@@ -476,12 +484,22 @@ function App() {
     }, {})
   }, [landHoldings])
 
+  function showToast(
+    text: string,
+    tone: 'success' | 'warning' | 'info' | 'danger' = 'info',
+  ) {
+    setToastMessage({ text, tone })
+    window.setTimeout(() => {
+      setToastMessage((current) => (current?.text === text ? null : current))
+    }, 4500)
+  }
+
   function updatePositions(nextPositions: number[]) {
     positionsRef.current = nextPositions
     setPositions(nextPositions)
   }
 
-  function updateEducation(nextEducation: EducationState) {
+  function updateEducation(nextEducation: EducationState[]) {
     educationRef.current = nextEducation
     setEducation(nextEducation)
   }
@@ -609,15 +627,16 @@ function App() {
   }
 
   function getEducationIncomeBonusRate(playerIndex: number) {
-    if (players[playerIndex].role !== 'Human') {
+    const playerEdu = educationRef.current[playerIndex]
+    if (!playerEdu) {
       return 0
     }
 
-    if (educationRef.current.stage === 'masterCompleted') {
+    if (playerEdu.stage === 'masterCompleted') {
       return educationIncomeBonus.masterCompleted / 100
     }
 
-    if (educationRef.current.stage === 'bachelorCompleted') {
+    if (playerEdu.stage === 'bachelorCompleted') {
       return educationIncomeBonus.bachelorCompleted / 100
     }
 
@@ -887,6 +906,112 @@ function App() {
     return finalPosition
   }
 
+  function executeAIInfluenceCards(aiIndex: number) {
+    const aiCards = influenceHoldingsRef.current.filter((h) => h.playerIndex === aiIndex)
+    if (aiCards.length === 0) return
+
+    // 1. Tax Relief if low on cash
+    const taxCard = aiCards.find((c) => c.effect === 'taxRelief')
+    if (taxCard && cashRef.current[aiIndex] < 150000 && taxReliefTurnsRef.current[aiIndex] === 0) {
+      const nextTax = [...taxReliefTurnsRef.current]
+      nextTax[aiIndex] += 3
+      updateTaxReliefTurns(nextTax)
+      removeInfluenceHolding(taxCard.id)
+      showToast(`🛡 ${players[aiIndex].name} activated Tax Relief! (3 charges)`, 'warning')
+      setStatus(`🛡 ${players[aiIndex].name} used Tax Relief to protect against rent!`)
+      return
+    }
+
+    // 2. Zoning Permit to upgrade highest tier business
+    const zoningCard = aiCards.find((c) => c.effect === 'zoningPermit')
+    if (zoningCard) {
+      const playerBusinesses = businessesRef.current.filter(
+        (b) => b.playerIndex === aiIndex && b.level < maxBusinessLevel,
+      )
+      if (playerBusinesses.length > 0) {
+        const bestBusiness = [...playerBusinesses].sort((a, b) => b.pricePaid - a.pricePaid)[0]
+        const nextBusinesses = businessesRef.current.map((b) =>
+          b.id === bestBusiness.id ? { ...b, level: b.level + 1 } : b,
+        )
+        updateBusinesses(nextBusinesses)
+        removeInfluenceHolding(zoningCard.id)
+        showToast(`🏛 ${players[aiIndex].name} used Zoning Permit on ${bestBusiness.title}!`, 'info')
+        setStatus(
+          `🏛 ${players[aiIndex].name} used Zoning Permit! Upgraded ${bestBusiness.title} at ${boardTiles[bestBusiness.tileId].name} to Level ${bestBusiness.level + 1} for free!`,
+        )
+        return
+      }
+    }
+
+    // 3. Port Connection
+    const portCard = aiCards.find((c) => c.effect === 'portConnection')
+    if (portCard) {
+      const hasIndustrial = businessesRef.current.some(
+        (b) => b.playerIndex === aiIndex && industrialCategories.has(boardTiles[b.tileId].category),
+      )
+      const hasModifier = incomeModifiersRef.current.some(
+        (m) => m.playerIndex === aiIndex && m.scope === 'industrial',
+      )
+      if (hasIndustrial && !hasModifier) {
+        updateIncomeModifiers([
+          ...incomeModifiersRef.current,
+          {
+            id: `port-connection-${portCard.id}`,
+            eventTitle: 'Port Connection',
+            playerIndex: aiIndex,
+            multiplier: 1.4,
+            scope: 'industrial',
+          },
+        ])
+        removeInfluenceHolding(portCard.id)
+        showToast(`⚓ ${players[aiIndex].name} activated Port Connection (+40% income)!`, 'info')
+        setStatus(`${players[aiIndex].name} activated Port Connection for +40% industrial income!`)
+        return
+      }
+    }
+
+    // 4. Lease Pressure
+    const leaseCard = aiCards.find((c) => c.effect === 'leasePressure')
+    if (leaseCard && !leasePressurePlayersRef.current[aiIndex]) {
+      const ownedLandTiles = new Set(
+        landHoldingsRef.current.filter((l) => l.playerIndex === aiIndex).map((l) => l.tileId),
+      )
+      const hasTenants = businessesRef.current.some(
+        (b) => b.playerIndex !== aiIndex && ownedLandTiles.has(b.tileId),
+      )
+      if (hasTenants) {
+        const nextLease = [...leasePressurePlayersRef.current]
+        nextLease[aiIndex] = true
+        updateLeasePressurePlayers(nextLease)
+        removeInfluenceHolding(leaseCard.id)
+        showToast(`📜 ${players[aiIndex].name} activated Lease Pressure (20% share)!`, 'warning')
+        setStatus(
+          `${players[aiIndex].name} activated Lease Pressure! 20% Open Lease tenant share on next lap.`,
+        )
+        return
+      }
+    }
+
+    // 5. Influence Eviction
+    const evictionCard = aiCards.find((c) => c.effect === 'eviction')
+    if (evictionCard) {
+      const rivalBusinesses = businessesRef.current.filter((b) => b.playerIndex !== aiIndex)
+      if (rivalBusinesses.length > 0) {
+        const target = [...rivalBusinesses].sort((a, b) => b.pricePaid - a.pricePaid)[0]
+        const refund = Math.round(target.pricePaid * 0.5)
+        const nextCash = [...cashRef.current]
+        nextCash[target.playerIndex] += refund
+        updateCash(nextCash)
+        updateBusinesses(businessesRef.current.filter((b) => b.id !== target.id))
+        removeInfluenceHolding(evictionCard.id)
+        showToast(`💼 ${players[aiIndex].name} evicted rival ${target.title}!`, 'danger')
+        setStatus(
+          `💼 ${players[aiIndex].name} used Influence Eviction on ${target.title} at ${boardTiles[target.tileId].name}! ${players[target.playerIndex].name} received ${formatMoney(refund)} refund.`,
+        )
+      }
+    }
+  }
+
   async function playTurn(playerIndex: number, runId: number) {
     const player = players[playerIndex]
     setCurrentPlayerIndex(playerIndex)
@@ -896,12 +1021,13 @@ function App() {
       return
     }
 
-    if (player.role === 'Human' && educationRef.current.skipTurns > 0) {
-      await skipStudyTurn(runId)
+    if (educationRef.current[playerIndex].skipTurns > 0) {
+      await skipStudyTurn(playerIndex, runId)
       return
     }
 
     if (player.role === 'AI') {
+      executeAIInfluenceCards(playerIndex)
       setPhase('ai-delay')
       setStatus(`${player.name} is rolling next.`)
       await new Promise<void>((resolve) => {
@@ -980,10 +1106,10 @@ function App() {
 
     if (
       runId === runIdRef.current &&
-      player.role === 'Human' &&
+      typeof finalPosition === 'number' &&
       finalPosition === buraphaTile
     ) {
-      await handleBuraphaTile()
+      await handleBuraphaTile(playerIndex, runId)
       return
     }
 
@@ -1245,10 +1371,11 @@ function App() {
     }
   }
 
-  async function skipStudyTurn(runId: number) {
-    const currentEducation = educationRef.current
+  async function skipStudyTurn(playerIndex: number, runId: number) {
+    const currentEducation = educationRef.current[playerIndex]
     const remainingTurns = Math.max(currentEducation.skipTurns - 1, 0)
     const completedStudy = currentEducation.activeStudy
+    const nextEduList = [...educationRef.current]
     const nextEducation: EducationState = {
       stage: currentEducation.stage,
       activeStudy: remainingTurns === 0 ? 'none' : currentEducation.activeStudy,
@@ -1263,7 +1390,8 @@ function App() {
       nextEducation.stage = 'masterCompleted'
     }
 
-    updateEducation(nextEducation)
+    nextEduList[playerIndex] = nextEducation
+    updateEducation(nextEduList)
     setPhase('study-skip')
 
     if (remainingTurns === 0) {
@@ -1271,9 +1399,17 @@ function App() {
         completedStudy === 'master'
           ? educationIncomeBonus.masterCompleted
           : educationIncomeBonus.bachelorCompleted
-      setStatus(`Player finished studying at Burapha University. Business income bonus is now +${bonus}%.`)
+      showToast(
+        `🎓 ${players[playerIndex].name} graduated with ${completedStudy === 'master' ? "Master's" : "Bachelor's"} degree! (+${bonus}% income bonus)`,
+        'success',
+      )
+      setStatus(
+        `${players[playerIndex].name} finished studying at Burapha University. Business income bonus is now +${bonus}%.`,
+      )
     } else {
-      setStatus(`Player is studying at Burapha University. ${remainingTurns} skipped turn left.`)
+      setStatus(
+        `${players[playerIndex].name} is studying at Burapha University. ${remainingTurns} skipped turn(s) left.`,
+      )
     }
 
     await wait(aiDelayMs)
@@ -1283,8 +1419,55 @@ function App() {
     }
   }
 
-  async function handleBuraphaTile() {
-    const currentEducation = educationRef.current
+  async function handleBuraphaTile(playerIndex: number, runId: number) {
+    const player = players[playerIndex]
+    const currentEducation = educationRef.current[playerIndex]
+
+    if (player.role === 'AI') {
+      const aiCash = cashRef.current[playerIndex]
+      if (currentEducation.stage === 'none' && aiCash >= 120000) {
+        const nextEduList = [...educationRef.current]
+        nextEduList[playerIndex] = {
+          stage: 'none',
+          activeStudy: 'bachelor',
+          skipTurns: studySkipTurns,
+        }
+        updateEducation(nextEduList)
+        showToast(
+          `🎓 ${player.name} enrolled in Bachelor Degree at Burapha University! (+${educationIncomeBonus.bachelorCompleted}% income)`,
+          'info',
+        )
+        setStatus(
+          `${player.name} started Bachelor degree at Burapha University. Skipped ${studySkipTurns} turns for +${educationIncomeBonus.bachelorCompleted}% income bonus.`,
+        )
+        await wait(aiDelayMs)
+        return
+      }
+
+      if (currentEducation.stage === 'bachelorCompleted' && aiCash >= 220000) {
+        const nextEduList = [...educationRef.current]
+        nextEduList[playerIndex] = {
+          stage: 'bachelorCompleted',
+          activeStudy: 'master',
+          skipTurns: studySkipTurns,
+        }
+        updateEducation(nextEduList)
+        showToast(
+          `🎓 ${player.name} enrolled in Master Degree at Burapha University! (+${educationIncomeBonus.masterCompleted}% income)`,
+          'info',
+        )
+        setStatus(
+          `${player.name} started Master degree at Burapha University. Skipped ${studySkipTurns} turns for +${educationIncomeBonus.masterCompleted}% income bonus.`,
+        )
+        await wait(aiDelayMs)
+        return
+      }
+
+      setStatus(`${player.name} visited Burapha University and continued without enrolling.`)
+      await wait(aiDelayMs)
+      return
+    }
+
     const nextChoice: BuraphaChoice =
       currentEducation.stage === 'none'
         ? 'bachelor'
@@ -1296,9 +1479,9 @@ function App() {
     setPhase('education-choice')
 
     if (nextChoice === 'bachelor') {
-      setStatus('Burapha University: choose whether to continue studying.')
+      setStatus('Burapha University: choose whether to start a bachelor degree.')
     } else if (nextChoice === 'master') {
-      setStatus('Burapha University: choose whether to study a master degree.')
+      setStatus('Burapha University: choose whether to start a master degree.')
     } else {
       setStatus('Burapha University: alumni fee card is available.')
     }
@@ -1308,6 +1491,10 @@ function App() {
     })
     educationChoiceResolverRef.current = null
     setBuraphaChoice(null)
+
+    if (runId !== runIdRef.current) {
+      return
+    }
   }
 
   async function playRound() {
@@ -1334,7 +1521,8 @@ function App() {
         }
       }
 
-      continueStudyRounds = educationRef.current.skipTurns > 0 || prisonTurnsRef.current[0] > 0
+      continueStudyRounds =
+        educationRef.current[0].skipTurns > 0 || prisonTurnsRef.current[0] > 0
     }
 
     if (runId !== runIdRef.current) {
@@ -2036,11 +2224,19 @@ function App() {
   }
 
   function startStudy(activeStudy: Exclude<ActiveStudy, 'none'>) {
-    updateEducation({
-      stage: educationRef.current.stage,
+    const playerIndex = 0
+    const currentEdu = educationRef.current[playerIndex]
+    const nextEduList = [...educationRef.current]
+    nextEduList[playerIndex] = {
+      stage: currentEdu.stage,
       activeStudy,
       skipTurns: studySkipTurns,
-    })
+    }
+    updateEducation(nextEduList)
+    showToast(
+      `🎓 Enrolled in ${activeStudy === 'master' ? "Master's" : "Bachelor's"} degree at Burapha University!`,
+      'info',
+    )
     resolveEducationChoice(
       activeStudy === 'bachelor'
         ? `Player started bachelor study at Burapha University. Skip ${studySkipTurns} turns, then business income becomes +${educationIncomeBonus.bachelorCompleted}%.`
@@ -2059,11 +2255,13 @@ function App() {
     influenceChoiceResolverRef.current?.()
     activeRunRef.current = false
     updatePositions(players.map(() => 0))
-    updateEducation({
-      stage: 'none',
-      activeStudy: 'none',
-      skipTurns: 0,
-    })
+    updateEducation(
+      players.map(() => ({
+        stage: 'none',
+        activeStudy: 'none',
+        skipTurns: 0,
+      })),
+    )
     setBuraphaChoice(null)
     updateInvestmentVisits(players.map(() => 0))
     updateCash(players.map(() => startingCash))
@@ -2261,18 +2459,17 @@ function App() {
     Boolean(selectedLandHolding) && selectedLandHolding?.playerIndex === currentPlayerIndex
   const canCurrentPlayerEditInventoryLandPolicy =
     Boolean(selectedInventoryLand) && selectedInventoryLand?.playerIndex === currentPlayerIndex
+  const selectedEdu = education[selectedPlayerIndex]
   const selectedEducationStatus =
-    selectedPlayer.role === 'Human'
-      ? education.activeStudy === 'bachelor'
-        ? `Bachelor study: ${education.skipTurns} skipped turn left`
-        : education.activeStudy === 'master'
-          ? `Master study: ${education.skipTurns} skipped turn left`
-          : education.stage === 'masterCompleted'
-            ? `Master completed: +${educationIncomeBonus.masterCompleted}% income`
-            : education.stage === 'bachelorCompleted'
-              ? `Bachelor completed: +${educationIncomeBonus.bachelorCompleted}% income`
-              : 'Not enrolled'
-      : 'No education track'
+    selectedEdu?.activeStudy === 'bachelor'
+      ? `Bachelor study: ${selectedEdu.skipTurns} skipped turn(s) left`
+      : selectedEdu?.activeStudy === 'master'
+        ? `Master study: ${selectedEdu.skipTurns} skipped turn(s) left`
+        : selectedEdu?.stage === 'masterCompleted'
+          ? `Master completed: +${educationIncomeBonus.masterCompleted}% income`
+          : selectedEdu?.stage === 'bachelorCompleted'
+            ? `Bachelor completed: +${educationIncomeBonus.bachelorCompleted}% income`
+            : 'Not enrolled'
 
   return (
     <main className="game-shell">
@@ -2504,6 +2701,32 @@ function App() {
                   <dd>{selectedEducationStatus}</dd>
                 </div>
               </dl>
+              <div className="player-badges">
+                {education[selectedPlayerIndex]?.stage === 'masterCompleted' && (
+                  <span className="player-badge badge-education">🎓 Master (+30%)</span>
+                )}
+                {education[selectedPlayerIndex]?.stage === 'bachelorCompleted' && (
+                  <span className="player-badge badge-education">🎓 Bachelor (+15%)</span>
+                )}
+                {education[selectedPlayerIndex]?.activeStudy !== 'none' && (
+                  <span className="player-badge badge-studying">
+                    📚 Studying ({education[selectedPlayerIndex]?.skipTurns} left)
+                  </span>
+                )}
+                {taxReliefTurns[selectedPlayerIndex] > 0 && (
+                  <span className="player-badge badge-shield">
+                    🛡 Tax Relief ({taxReliefTurns[selectedPlayerIndex]})
+                  </span>
+                )}
+                {prisonContactCoupons[selectedPlayerIndex] && (
+                  <span className="player-badge badge-coupon">🎟 5% Coupon</span>
+                )}
+                {prisonTurns[selectedPlayerIndex] > 0 && (
+                  <span className="player-badge badge-jail">
+                    🔒 Jail ({prisonTurns[selectedPlayerIndex]} left)
+                  </span>
+                )}
+              </div>
             </div>
 
             <div className="ledger-section">
@@ -3445,6 +3668,12 @@ function App() {
                 ))}
               </div>
             </div>
+          </div>
+        )}
+
+        {toastMessage && (
+          <div className={`toast-notification toast-${toastMessage.tone}`} role="status">
+            <span>{toastMessage.text}</span>
           </div>
         )}
       </div>

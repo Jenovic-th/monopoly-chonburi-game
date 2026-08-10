@@ -1,5 +1,29 @@
 # DEVLOG
 
+## 2026-08-10
+
+### Latest handoff status
+
+- Current milestone: **Phase 1: 100% Completed** (Full Gameplay Loop, AI Influence Engine, Burapha University Education, Toast Alerts, HUD Badges).
+- Repository:
+  - https://github.com/Jenovic-th/monopoly-chonburi-game
+
+### Completed for Phase 1 (100%)
+
+- **AI Influence Card Execution Engine**:
+  - AI players now intelligently play all 5 influence card types (`Tax Relief`, `Zoning Permit`, `Port Connection`, `Lease Pressure`, `Influence Eviction`).
+- **AI Education Loop at Burapha University (Tile 10)**:
+  - Education is now tracked per player.
+  - AI evaluates cash reserves and enrolls in Bachelor's (+15% income) or Master's (+30% income) studies.
+- **Dynamic Floating Toast Notification Banner**:
+  - Added rich animated feedback toasts for purchases, rent waives, police raids, degrees, and events.
+- **Player Ledger Status Badges**:
+  - Visual badges for Education degrees, studying turn countdowns, Tax Relief shields, Prison Coupons, and Jail status.
+- **Full Verification**:
+  - `npm.cmd run check:encoding` passed.
+  - `npm.cmd run lint` passed (0 errors).
+  - `npm.cmd run build` passed.
+
 ## 2026-08-06
 
 ### Latest handoff status

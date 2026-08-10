@@ -207,17 +207,17 @@
 - [x] Pay investment income from stored investments.
 - [x] Add land ownership purchase flow.
 - [x] Add board ownership markers for land owners.
-- [ ] Decide eviction/seizure rules after more playtesting.
+- [x] Decide eviction/seizure rules after more playtesting.
 - [x] Apply education income bonus when business income is paid.
 - [x] Add game end tracking and Net Worth winner screen.
-- [ ] Refine responsive board/panel proportions after more playtesting.
-- [ ] Decide whether investment cards should vary by tile category or zone.
+- [x] Refine responsive board/panel proportions after more playtesting.
+- [x] Decide whether investment cards should vary by tile category or zone.
 - [x] Decide if multiple players can invest on the same tile.
 - [x] Decide what happens if a land owner buys a tile that already has investments.
-- [ ] Decide what the 3 action cards should actually do.
-- [ ] Decide whether card choices should depend on tile category.
-- [ ] Decide whether AI should choose cards automatically.
-- [ ] Add real card result display after selecting a card.
+- [x] Decide what the 3 action cards should actually do.
+- [x] Decide whether card choices should depend on tile category.
+- [x] Decide whether AI should choose cards automatically.
+- [x] Add real card result display after selecting a card (Floating Toast notifications).
 - [x] Add tile value and purchase price.
 - [x] Add ownership system for land.
 - [x] Add rent system.
@@ -235,10 +235,13 @@
 - [x] Add Net Worth ranking popup for balance testing.
 - [x] Add real Local Power Broker card effects, prices, card inventory, and 20% jail-risk roll.
 - [x] Add 2-3 real Local Power Broker effects for Demo 1.
-- [ ] Playtest and tune the `10,000,000` Net Worth target.
+- [x] Playtest and tune the `10,000,000` Net Worth target.
 - [x] Hide dev cash/test move controls behind a Dev Mode toggle.
 - [x] Add simple AI economic decisions.
-- [ ] Update README with setup, dev, and project overview.
+- [x] Add AI influence card execution engine (Tax Relief, Zoning Permit, Port Connection, Lease Pressure, Eviction).
+- [x] Add AI education at Burapha University.
+- [x] Add Player status badges (Education, Tax Shield, Prison Coupon, Jail).
+- [x] Update README with setup, dev, and project overview.
 
 ## Design Questions
 
