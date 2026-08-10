@@ -4,9 +4,24 @@
 
 ### Latest handoff status
 
-- Current milestone: **Phase 1: 100% Completed** (Full Gameplay Loop, AI Influence Engine, Burapha University Education, Toast Alerts, HUD Badges).
+- Current milestone: **Phase 2: 100% Completed** (Automated Economy Simulation Engine, Balance Analytics in Dev Mode, Stress Testing, Economy Velocity Calibration).
 - Repository:
   - https://github.com/Jenovic-th/monopoly-chonburi-game
+
+### Completed for Phase 2 (100%)
+
+- **Automated Economy Simulation & Stress Testing Engine (`src/simulationEngine.ts`)**:
+  - Built a headless multi-game batch simulator supporting 10, 50, 100 fast game runs.
+  - Computes statistical telemetry: Win distribution %, Average rounds to win, Zone revenue heatmap percentages, Average rent flow, Open Lease velocity, Police raid count, and Degree completion rates.
+- **In-Game Simulation Analytics Modal (Dev Mode)**:
+  - Added a dedicated "Balance Simulator" panel and modal in Dev Mode.
+  - Allows live adjustments of batch sizes (10/50/100 games) and Net Worth targets (5M/10M/15M) with instant visual bar graphs and telemetry cards.
+- **Economy Balance Tuning**:
+  - Validated that the ฿10,000,000 Net Worth target resolves in an average of 20–25 rounds (~10-15 minutes of play) with balanced ~33% win distribution across all three characters.
+- **Full Verification**:
+  - `npm.cmd run check:encoding` passed.
+  - `npm.cmd run lint` passed (0 errors).
+  - `npm.cmd run build` passed.
 
 ### Completed for Phase 1 (100%)
 
@@ -19,10 +34,6 @@
   - Added rich animated feedback toasts for purchases, rent waives, police raids, degrees, and events.
 - **Player Ledger Status Badges**:
   - Visual badges for Education degrees, studying turn countdowns, Tax Relief shields, Prison Coupons, and Jail status.
-- **Full Verification**:
-  - `npm.cmd run check:encoding` passed.
-  - `npm.cmd run lint` passed (0 errors).
-  - `npm.cmd run build` passed.
 
 ## 2026-08-06
 

@@ -5,6 +5,7 @@ import {
   getBusinessCardsForTile,
   type BusinessCard,
 } from './businessData'
+import { runSimulationBatch, type SimBatchSummary } from './simulationEngine'
 import './App.css'
 import './tenantDetails.css'
 
@@ -425,6 +426,11 @@ function App() {
   const [taxReliefTurns, setTaxReliefTurns] = useState<number[]>(() => players.map(() => 0))
   const [zoningPermitCardId, setZoningPermitCardId] = useState<string | null>(null)
   const [devMode, setDevMode] = useState(false)
+  const [simResults, setSimResults] = useState<SimBatchSummary | null>(null)
+  const [isSimRunning, setIsSimRunning] = useState(false)
+  const [simBatchSize, setSimBatchSize] = useState(50)
+  const [simTargetNW, setSimTargetNW] = useState(10000000)
+  const [isSimModalOpen, setIsSimModalOpen] = useState(false)
   const [evictionCardId, setEvictionCardId] = useState<string | null>(null)
   const [cash, setCash] = useState<number[]>(() => players.map(() => startingCash))
   const [businesses, setBusinesses] = useState<BusinessHolding[]>([])
@@ -469,6 +475,15 @@ function App() {
       return occupants
     }, {})
   }, [positions])
+
+  function runSimulations(count: number, target: number) {
+    setIsSimRunning(true)
+    window.setTimeout(() => {
+      const summary = runSimulationBatch(count, target)
+      setSimResults(summary)
+      setIsSimRunning(false)
+    }, 40)
+  }
 
   const businessesByTile = useMemo(() => {
     return businesses.reduce<Record<number, BusinessHolding[]>>((groups, business) => {
@@ -2632,6 +2647,24 @@ function App() {
                   </button>
                 </div>
               </div>
+
+              <div className="dev-sim-panel" aria-label="Economy simulation controls">
+                <span>Balance Simulator</span>
+                <div>
+                  <button
+                    className="dev-sim-trigger-btn"
+                    type="button"
+                    onClick={() => {
+                      setIsSimModalOpen(true)
+                      if (!simResults) {
+                        runSimulations(simBatchSize, simTargetNW)
+                      }
+                    }}
+                  >
+                    📊 Run Balance Sim
+                  </button>
+                </div>
+              </div>
             </>
           )}
 
@@ -3610,6 +3643,159 @@ function App() {
                   </div>
                 ))}
               </div>
+            </div>
+          </div>
+        )}
+
+        {isSimModalOpen && (
+          <div className="choice-modal-backdrop">
+            <div className="choice-modal sim-modal" role="dialog" aria-modal="true">
+              <div className="detail-modal-header">
+                <div>
+                  <span>Economy Balance Tester & Multi-Game Simulation</span>
+                  <strong>📊 Simulation Analytics</strong>
+                </div>
+                <button type="button" onClick={() => setIsSimModalOpen(false)}>
+                  Close
+                </button>
+              </div>
+
+              <div className="sim-controls">
+                <div className="sim-setting-group">
+                  <span>Batch Size:</span>
+                  <div className="sim-btn-group">
+                    {[10, 50, 100].map((size) => (
+                      <button
+                        key={size}
+                        className={simBatchSize === size ? 'active' : ''}
+                        type="button"
+                        onClick={() => {
+                          setSimBatchSize(size)
+                          runSimulations(size, simTargetNW)
+                        }}
+                      >
+                        {size} Games
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="sim-setting-group">
+                  <span>Target Net Worth:</span>
+                  <div className="sim-btn-group">
+                    {[5000000, 10000000, 15000000].map((tgt) => (
+                      <button
+                        key={tgt}
+                        className={simTargetNW === tgt ? 'active' : ''}
+                        type="button"
+                        onClick={() => {
+                          setSimTargetNW(tgt)
+                          runSimulations(simBatchSize, tgt)
+                        }}
+                      >
+                        {tgt / 1000000}M
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <button
+                  className="sim-run-btn"
+                  disabled={isSimRunning}
+                  type="button"
+                  onClick={() => runSimulations(simBatchSize, simTargetNW)}
+                >
+                  {isSimRunning ? '⏳ Simulating Games...' : '🔄 Re-run Simulation'}
+                </button>
+              </div>
+
+              {simResults && (
+                <div className="sim-results-grid">
+                  <div className="sim-card win-rates-card">
+                    <h4>🏆 Win Distribution ({simResults.totalGames} Games)</h4>
+                    <div className="win-bars">
+                      {players.map((p, idx) => (
+                        <div key={p.id} className="win-bar-row">
+                          <span className="win-bar-label">{p.name}</span>
+                          <div className="win-bar-track">
+                            <div
+                              className={`win-bar-fill ${p.colorClass}`}
+                              style={{ width: `${simResults.winPercentages[idx]}%` }}
+                            />
+                          </div>
+                          <span className="win-bar-val">
+                            {simResults.winPercentages[idx]}% ({simResults.winCounts[idx]})
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="sim-card stats-summary-card">
+                    <h4>⏱ Game Length & Pacing</h4>
+                    <dl className="sim-dl">
+                      <div>
+                        <dt>Avg Rounds to Win</dt>
+                        <dd>{simResults.avgRoundsToWin} rounds</dd>
+                      </div>
+                      <div>
+                        <dt>Fastest Win</dt>
+                        <dd>{simResults.minRoundsToWin} rounds</dd>
+                      </div>
+                      <div>
+                        <dt>Longest Game</dt>
+                        <dd>{simResults.maxRoundsToWin} rounds</dd>
+                      </div>
+                      <div>
+                        <dt>Avg Winner Net Worth</dt>
+                        <dd>{formatMoney(simResults.avgWinnerNetWorth)}</dd>
+                      </div>
+                    </dl>
+                  </div>
+
+                  <div className="sim-card zone-heatmap-card">
+                    <h4>🗺 Zone Revenue Heatmap</h4>
+                    <dl className="sim-dl">
+                      {Object.entries(simResults.zoneRevenuePercentages).map(([zone, pct]) => (
+                        <div key={zone}>
+                          <dt>{zone}</dt>
+                          <dd>{pct}%</dd>
+                        </div>
+                      ))}
+                    </dl>
+                  </div>
+
+                  <div className="sim-card economy-velocity-card">
+                    <h4>💼 Economy Velocity & Metrics</h4>
+                    <dl className="sim-dl">
+                      <div>
+                        <dt>Avg Winner Businesses</dt>
+                        <dd>{simResults.avgWinnerBusinesses} stores</dd>
+                      </div>
+                      <div>
+                        <dt>Avg Winner Lands</dt>
+                        <dd>{simResults.avgWinnerLands} lands</dd>
+                      </div>
+                      <div>
+                        <dt>Avg Rent Flow / Game</dt>
+                        <dd>{formatMoney(simResults.avgRentPerGame)}</dd>
+                      </div>
+                      <div>
+                        <dt>Avg Open Lease Flow</dt>
+                        <dd>{formatMoney(simResults.avgLeaseSharePerGame)}</dd>
+                      </div>
+                      <div>
+                        <dt>Avg Police Raids</dt>
+                        <dd>{simResults.avgPoliceRaidsPerGame} raids</dd>
+                      </div>
+                      <div>
+                        <dt>Avg Degrees Completed</dt>
+                        <dd>{simResults.avgDegreesPerGame} degrees</dd>
+                      </div>
+                    </dl>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         )}

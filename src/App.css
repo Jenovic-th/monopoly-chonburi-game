@@ -2193,4 +2193,204 @@ button {
   border: 1px solid #fecaca;
 }
 
+/* Dev Sim Panel */
+.dev-sim-panel {
+  display: grid;
+  gap: 4px;
+}
+
+.dev-sim-trigger-btn {
+  padding: 6px 12px;
+  border-radius: 6px;
+  border: 1px solid #3b82f6;
+  background: linear-gradient(135deg, #1e40af, #1e3a8a);
+  color: #ffffff;
+  font-size: 11px;
+  font-weight: 800;
+  cursor: pointer;
+  transition: filter 0.15s ease;
+}
+
+.dev-sim-trigger-btn:hover {
+  filter: brightness(1.15);
+}
+
+/* Simulation Analytics Modal */
+.sim-modal {
+  width: min(840px, calc(100vw - 32px)) !important;
+  max-height: 88svh;
+  overflow-y: auto;
+  display: grid;
+  gap: 16px;
+}
+
+.sim-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 16px;
+  border-radius: 10px;
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+}
+
+.sim-setting-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #334155;
+}
+
+.sim-btn-group {
+  display: flex;
+  gap: 4px;
+}
+
+.sim-btn-group button {
+  padding: 4px 10px;
+  border-radius: 6px;
+  border: 1px solid #cbd5e1;
+  background: #ffffff;
+  font-size: 11px;
+  font-weight: 700;
+  color: #475569;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.sim-btn-group button.active {
+  background: #2563eb;
+  border-color: #1d4ed8;
+  color: #ffffff;
+}
+
+.sim-run-btn {
+  padding: 8px 16px;
+  border-radius: 8px;
+  border: none;
+  background: linear-gradient(135deg, #10b981, #059669);
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 800;
+  cursor: pointer;
+  transition: filter 0.15s ease;
+}
+
+.sim-run-btn:hover:not(:disabled) {
+  filter: brightness(1.1);
+}
+
+.sim-run-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.sim-results-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 14px;
+}
+
+.sim-card {
+  padding: 14px;
+  border-radius: 12px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
+  display: grid;
+  gap: 10px;
+}
+
+.sim-card h4 {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 800;
+  color: #1e293b;
+  border-bottom: 1px solid #f1f5f9;
+  padding-bottom: 6px;
+}
+
+.win-bars {
+  display: grid;
+  gap: 8px;
+}
+
+.win-bar-row {
+  display: grid;
+  grid-template-columns: 100px 1fr 90px;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.win-bar-label {
+  color: #475569;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.win-bar-track {
+  height: 14px;
+  border-radius: 999px;
+  background: #f1f5f9;
+  overflow: hidden;
+  border: 1px solid #e2e8f0;
+}
+
+.win-bar-fill {
+  height: 100%;
+  border-radius: 999px;
+  transition: width 0.4s ease;
+}
+
+.win-bar-fill.token-blue {
+  background: #3b82f6;
+}
+
+.win-bar-fill.token-red {
+  background: #ef4444;
+}
+
+.win-bar-fill.token-green {
+  background: #10b981;
+}
+
+.win-bar-val {
+  text-align: right;
+  color: #0f172a;
+}
+
+.sim-dl {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px 12px;
+  margin: 0;
+}
+
+.sim-dl div {
+  display: grid;
+  gap: 2px;
+}
+
+.sim-dl dt {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: #64748b;
+}
+
+.sim-dl dd {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+
 

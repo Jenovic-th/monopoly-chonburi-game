@@ -242,6 +242,10 @@
 - [x] Add AI education at Burapha University.
 - [x] Add Player status badges (Education, Tax Shield, Prison Coupon, Jail).
 - [x] Update README with setup, dev, and project overview.
+- [x] Build Automated Economy Simulation & Stress Testing Engine (`src/simulationEngine.ts`).
+- [x] Add in-game Simulation Analytics & Balance Modal in Dev Mode.
+- [x] Measure and verify game balance across 50-game batches (Win distribution, average rounds, zone revenue heatmap, rent flow).
+- [x] Fine-tune economy velocity (20-25 average rounds to ฿10,000,000 Net Worth).
 
 ## Design Questions
 
