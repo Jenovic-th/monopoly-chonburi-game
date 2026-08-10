@@ -252,7 +252,9 @@
 - [x] Add Floating Cash Particle Effects (+฿X / -฿X) for transactions.
 - [x] Visual polish: active tile glow, rolling dice hover dynamics, and glassmorphism styling.
 - [x] Create Location-Accurate Cartoon Graphic Banners for all 4 Zones (Bangsaen, Sriracha, Amata, Pattaya).
-- [x] Build Tile Illustration Engine (`src/tileIllustrations.ts`) mapping contextual Thai/Eng titles, zone badges, local landmark icons, and tier icons across all 40 tiles.
+- [x] Generate and map dedicated cartoon artwork for specific iconic landmarks (Sanctuary of Truth, Nong Nooch Garden, Burapha University, Khao Kheow Zoo, Investment Bank).
+- [x] Fix strict 1-to-1 context and tile name mapping across all 40 tiles in `src/tileIllustrations.ts` and `src/boardData.ts` (zero mixed-up landmarks).
+- [x] Upgrade physical game board styling: zone color strips, landmark mini-icons, crisp Thai titles, compact price chips, corner landmark badges, and dark slate board bezel.
 - [x] Overhaul Business Card Choice Modal with Hero Landmark Banner, Tier Badges (Small, Medium, Large), Cost/Income comparison stat boxes, and responsive non-overflow layout.
 - [x] Overhaul Investment Bank Choice Modal with Landmark Hero Banners and Tier Icons.
 - [x] Verify responsive modal viewports across mobile and desktop without text/box clipping.

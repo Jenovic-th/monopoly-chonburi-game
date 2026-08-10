@@ -29,91 +29,133 @@
   grid-template-columns: repeat(11, 1fr);
   grid-template-rows: repeat(11, 1fr);
   position: relative;
-  border: 3px solid #1e252b;
-  background: #dfe8e5;
-  box-shadow: 0 24px 70px rgba(23, 32, 38, 0.22);
+  border: 4px solid #0f172a;
+  border-radius: 12px;
+  background: #0f172a;
+  box-shadow:
+    0 24px 70px rgba(15, 23, 42, 0.4),
+    inset 0 0 0 2px rgba(255, 255, 255, 0.1);
+  gap: 2px;
+  padding: 2px;
 }
 
 .tile {
   position: relative;
-  display: grid;
-  grid-template-rows: auto 1fr;
-  align-items: start;
-  gap: 3px;
-  padding: clamp(4px, 0.75vmin, 8px);
-  border: 1px solid #2e353a;
-  background: #fafafa;
+  display: flex;
+  flex-direction: column;
+  background: #ffffff;
+  border-radius: 4px;
   overflow: hidden;
   cursor: pointer;
+  transition: all 0.15s ease;
+  user-select: none;
 }
 
 .tile:hover {
-  filter: brightness(1.03);
+  transform: scale(1.04);
+  z-index: 10;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.25);
+  outline: 2px solid #3b82f6;
 }
 
-.tile:nth-child(2n).tile-placeholder {
-  background: #f0f3f5;
+.tile-zone-strip {
+  height: clamp(4px, 0.65vmin, 7px);
+  width: 100%;
+  flex-shrink: 0;
 }
 
-.corner-tile {
-  background: #fff9e8;
-  border-width: 2px;
-}
-
-.start-tile {
-  background: #d8f3ff;
+.tile-top-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1px 3px;
+  gap: 2px;
 }
 
 .tile-number {
-  color: #242b31;
-  font-size: clamp(10px, 1.45vmin, 15px);
-  font-weight: 800;
+  color: #475569;
+  font-size: clamp(8px, 1.1vmin, 12px);
+  font-weight: 900;
   line-height: 1;
 }
 
-.tile-name {
-  color: #25313a;
-  font-size: clamp(8px, 0.95vmin, 11px);
+.tile-mini-icon {
+  font-size: clamp(10px, 1.35vmin, 15px);
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.25));
+}
+
+.tile-name-box {
+  padding: 0 2px;
+  text-align: center;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.tile-name-th {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+  color: #0f172a;
+  font-size: clamp(7.5px, 0.9vmin, 10.5px);
   font-weight: 800;
-  line-height: 1.05;
-  max-width: 100%;
-  overflow-wrap: anywhere;
+  line-height: 1.1;
+  word-break: break-word;
+}
+
+.corner-tile {
+  background: linear-gradient(135deg, #ffffff, #f1f5f9);
+  border: 1px solid #cbd5e1;
+  z-index: 2;
+}
+
+.corner-tile .tile-mini-icon {
+  font-size: clamp(14px, 1.8vmin, 20px);
+}
+
+.start-tile {
+  background: linear-gradient(135deg, #eff6ff, #dbeafe);
+  border: 1px solid #93c5fd;
 }
 
 .land-price {
   position: absolute;
-  left: clamp(3px, 0.55vmin, 6px);
-  right: clamp(3px, 0.55vmin, 6px);
-  bottom: clamp(2px, 0.35vmin, 5px);
-  min-height: clamp(13px, 1.55vmin, 18px);
-  padding: 1px 3px;
-  border-radius: 4px;
-  background: rgba(23, 32, 38, 0.82);
-  color: #ffffff;
-  font-size: clamp(8px, 0.9vmin, 10px);
+  left: 2px;
+  right: 2px;
+  bottom: 2px;
+  min-height: clamp(11px, 1.4vmin, 16px);
+  padding: 0 2px;
+  border-radius: 3px;
+  background: rgba(15, 23, 42, 0.88);
+  color: #f8fafc;
+  font-size: clamp(7px, 0.85vmin, 9.5px);
   font-weight: 900;
-  line-height: 1.1;
+  line-height: 1.2;
   text-align: center;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  z-index: 3;
+  letter-spacing: -0.02em;
 }
 
 .land-owner {
   position: absolute;
-  left: clamp(3px, 0.55vmin, 6px);
-  right: clamp(3px, 0.55vmin, 6px);
-  bottom: clamp(18px, 2.15vmin, 25px);
-  min-height: clamp(12px, 1.45vmin, 16px);
+  left: 2px;
+  right: 2px;
+  bottom: clamp(14px, 1.8vmin, 20px);
+  min-height: clamp(11px, 1.35vmin, 15px);
   display: grid;
   place-items: center;
-  padding: 1px 3px;
-  border: 1px solid #111820;
-  border-radius: 4px;
+  padding: 0 2px;
+  border: 1px solid rgba(0, 0, 0, 0.3);
+  border-radius: 3px;
   color: #ffffff;
-  font-size: clamp(7px, 0.82vmin, 9px);
+  font-size: clamp(6.5px, 0.78vmin, 8.5px);
   font-weight: 900;
-  line-height: 1.1;
+  line-height: 1;
   text-align: center;
   white-space: nowrap;
   overflow: hidden;
@@ -123,9 +165,9 @@
 
 .business-markers {
   position: absolute;
-  left: clamp(3px, 0.55vmin, 6px);
-  right: clamp(3px, 0.55vmin, 6px);
-  bottom: clamp(34px, 4.1vmin, 48px);
+  left: 2px;
+  right: 2px;
+  bottom: clamp(27px, 3.4vmin, 38px);
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
@@ -135,17 +177,17 @@
 }
 
 .business-marker {
-  min-width: clamp(12px, 1.4vmin, 16px);
-  height: clamp(12px, 1.4vmin, 16px);
+  min-width: clamp(10px, 1.2vmin, 14px);
+  height: clamp(10px, 1.2vmin, 14px);
   display: inline-grid;
   place-items: center;
-  border: 1px solid #111820;
-  border-radius: 3px;
+  border: 1px solid rgba(0, 0, 0, 0.4);
+  border-radius: 2px;
   color: #ffffff;
-  font-size: clamp(7px, 0.85vmin, 9px);
+  font-size: clamp(6.5px, 0.78vmin, 8.5px);
   font-weight: 900;
   line-height: 1;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
 }
 
 .tile-market {
@@ -295,15 +337,17 @@
   z-index: 12;
   align-self: center;
   justify-self: center;
-  width: min(82%, 380px);
+  width: min(88%, 420px);
   display: grid;
   align-content: center;
   gap: 10px;
-  padding: 14px;
-  border: 2px solid rgba(30, 37, 43, 0.18);
-  border-radius: 8px;
-  background: rgba(255, 255, 255, 0.78);
-  color: #1c242a;
+  padding: 16px 20px;
+  border: 2px solid rgba(255, 255, 255, 0.8);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(16px);
+  color: #0f172a;
+  box-shadow: 0 20px 48px rgba(15, 23, 42, 0.25);
   overflow: hidden;
   text-align: center;
 }

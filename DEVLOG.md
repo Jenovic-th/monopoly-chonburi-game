@@ -22,13 +22,18 @@
     - 🛡 Protective barrier deflection on Tax Relief rent blocks
     - 🏆 Glorious brass victory fanfare on hitting ฿10,000,000 Net Worth
     - 🔇 In-game sound toggle (`🔊 Sound: ON / 🔇 Sound: OFF`)
-- **Location-Accurate Stylized Cartoon Graphic System (`src/tileIllustrations.ts`)**:
-  - Generated and integrated stylized cartoon landmark artwork across all 4 zones:
-    - 🏖 **Bangsaen + Nong Mon**: Palm trees, Wonnapha beach, seafood market, Khao Sam Muk, Burapha University.
-    - ⚓ **Sriracha + Laem Chabang**: Gantry cranes, cargo container ships, Koh Sichang, J-Park, Tiger Zoo.
-    - 🏭 **Amata City + Phan Thong**: Smart eco-factories, logistics hubs, worker markets, elevated expressways.
-    - 🎡 **Pattaya**: Walking street neon signs, tropical beach towers, Sanctuary of Truth, floating market.
-  - Built `getTileVisualDetails(tileId)` mapping Thai/Eng titles, zone badges, local landmark icons, and tier icons across all 40 tiles.
+- **Strict 1:1 Location-Accurate Landmark & Board Graphic System (`src/tileIllustrations.ts`)**:
+  - Generated dedicated cartoon art assets for specific iconic locations:
+    - 🏛 **Sanctuary of Truth (ปราสาทสัจธรรม - Tile 35)**: Handcrafted wooden seaside sanctuary temple.
+    - 🌴 **Nong Nooch Garden (สวนนงนุช - Tile 36)**: Tropical botanical gardens and cultural park.
+    - 🎓 **Burapha University (มหาวิทยาลัยบูรพา - Tile 10)**: Academic clocktower and student plaza.
+    - 🦛 **Khao Kheow Open Zoo (สวนสัตว์เปิดเขาเขียว - Tile 17)**: Wildlife sanctuary with pygmy hippo.
+    - 🏦 **Investment Bank (ธนาคารเพื่อการลงทุน - Tile 00)**: Central prosperity investment vault.
+  - Resolved all tile landmark mismatches: every single tile from 00 to 39 now maps 100% accurately to its own distinct Thai name, category, and landmark icon.
+  - **Enhanced Game Board Visuals**:
+    - Replaced blank board tiles with themed zone color bars (Aqua, Blue, Emerald, Amber).
+    - Added tile numbers, landmark mini-icons, bold Thai titles, and compact ฿ land price tags.
+    - Upgraded board frame with dark slate bezel, gold corner accents, and frosted glass center console.
 - **Overhauled Business & Land Choice Modals**:
   - Replaced plain text popup boxes with a Hero Landmark Banner with dark-gradient overlays for maximum readability.
   - Upgraded business tier cards with icon badges (Tier 1/2/3), dedicated Cost & Income comparison boxes, status tags, and Thai labels.

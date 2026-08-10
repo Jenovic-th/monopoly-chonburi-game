@@ -2559,28 +2559,41 @@ function App() {
 
               return markers
             }, {})
+            const tileVisual = getTileVisualDetails(tile)
             const landHolding = landHoldingByTile[tile]
             const isCorner = tile === 0 || tile === 10 || tile === 20 || tile === 30
             const tileData = boardTiles[tile]
 
             return (
               <div
-                className={`tile tile-${tileData.category} ${isCorner ? 'corner-tile' : ''} ${tile === 0 ? 'start-tile' : ''}`}
+                className={`tile tile-zone-${tileData.zone.replace(/[^a-zA-Z0-9]/g, '-').toLowerCase()} ${isCorner ? 'corner-tile' : ''} ${tile === 0 ? 'start-tile' : ''}`}
                 key={tile}
                 onClick={() => openLandDetail(tile)}
                 style={getTileGridPosition(tile)}
               >
-                <span className="tile-number">{tile.toString().padStart(2, '0')}</span>
-                <span className="tile-name">{tileData.name}</span>
+                <div
+                  className="tile-zone-strip"
+                  style={{ backgroundColor: tileVisual.accentColor }}
+                />
+
+                <div className="tile-top-row">
+                  <span className="tile-number">{tile.toString().padStart(2, '0')}</span>
+                  <span className="tile-mini-icon">{tileVisual.icon}</span>
+                </div>
+
+                <div className="tile-name-box">
+                  <span className="tile-name-th">{tileData.nameTh}</span>
+                </div>
+
                 {tileData.landPrice && (
-                  <span className="land-price">{formatCompactMoney(tileData.landPrice)}</span>
+                  <span className="land-price">฿{formatCompactMoney(tileData.landPrice)}</span>
                 )}
                 {landHolding && (
                   <span
                     className={`land-owner ${players[landHolding.playerIndex].colorClass}`}
                     title={`Land owner: ${players[landHolding.playerIndex].name}`}
                   >
-                    Owner {players[landHolding.playerIndex].name}
+                    👑 {players[landHolding.playerIndex].name}
                   </span>
                 )}
                 {tileBusinesses.length > 0 && (
@@ -2592,7 +2605,7 @@ function App() {
                           key={`${tile}-${playerIndex}`}
                           title={`${marker.owner.name}: ${marker.count} business${marker.count > 1 ? 'es' : ''}, max level ${marker.maxLevel}`}
                         >
-                          {marker.maxLevel}
+                          Lv.{marker.maxLevel}
                         </span>
                       ),
                     )}
@@ -3327,25 +3340,55 @@ function App() {
           )}
 
           {phase === 'land-choice' && (
-            <div className="land-choice" aria-label="Land purchase choice">
-              <span>Land Buyout</span>
-              <div className="land-buy-card">
-                <strong>{selectedLandTileData?.name ?? 'No land selected'}</strong>
-                <p>{selectedLandTileData?.description ?? 'Choose a board tile to inspect land details.'}</p>
-                <div className="land-buy-price">
-                  <span>Buyout Price</span>
-                  <strong>
-                    {selectedLandTileData?.landPrice
-                      ? formatMoney(selectedLandTileData.landPrice)
-                      : 'Not purchasable'}
-                  </strong>
-                </div>
-                {selectedLandHolding && (
-                  <div className="land-buy-price">
-                    <span>Current Owner</span>
-                    <strong>{players[selectedLandHolding.playerIndex].name}</strong>
-                  </div>
-                )}
+            <div className="card-choice-container" aria-label="Land purchase choice">
+              {(() => {
+                if (!selectedLandTileData) return null
+                const visual = getTileVisualDetails(selectedLandTileData.id)
+                return (
+                  <>
+                    <div
+                      className="modal-hero-banner"
+                      style={{
+                        backgroundImage: `linear-gradient(to bottom, rgba(15, 23, 42, 0.45), rgba(15, 23, 42, 0.90)), url(${visual.bannerImage})`,
+                        borderBottom: `3px solid ${visual.accentColor}`,
+                      }}
+                    >
+                      <div className="hero-banner-content">
+                        <div className="hero-top-badges">
+                          <span
+                            className="hero-zone-badge"
+                            style={{ backgroundColor: visual.accentColor }}
+                          >
+                            {selectedLandTileData.zoneTh}
+                          </span>
+                          <span className="hero-tag-badge">{visual.tagTh}</span>
+                        </div>
+                        <div className="hero-title-row">
+                          <span className="hero-icon">{visual.icon}</span>
+                          <div>
+                            <h2>{selectedLandTileData.nameTh}</h2>
+                            <p className="hero-eng-name">{selectedLandTileData.name}</p>
+                          </div>
+                        </div>
+                        <p className="hero-subtitle">{visual.subtitleTh}</p>
+                      </div>
+                    </div>
+
+                    <div className="action-cards-body">
+                      <div className="land-buy-price">
+                        <span>Buyout Price</span>
+                        <strong>
+                          {selectedLandTileData?.landPrice
+                            ? formatMoney(selectedLandTileData.landPrice)
+                            : 'Not purchasable'}
+                        </strong>
+                      </div>
+                      {selectedLandHolding && (
+                        <div className="land-buy-price">
+                          <span>Current Owner</span>
+                          <strong>{players[selectedLandHolding.playerIndex].name}</strong>
+                        </div>
+                      )}
                 {selectedLandHolding && (
                   <div className="land-policy-panel">
                     <div>
@@ -3443,7 +3486,10 @@ function App() {
                     {formatMoney(cash[currentPlayerIndex])}
                   </em>
                 )}
-              </div>
+                    </div>
+                  </>
+                )
+              })()}
             </div>
           )}
 
